@@ -1,15 +1,17 @@
+import hash_table::*;
+
 module data_table #( 
-  parameter KEY_WIDTH      = 32,
-  parameter VALUE_WIDTH    = 16,
-  parameter BUCKET_WIDTH   = 8,
-  parameter HEAD_PTR_WIDTH = 10
+  parameter KEY_WIDTH        = 32,
+  parameter VALUE_WIDTH      = 16,
+  parameter BUCKET_WIDTH     = 8,
+  parameter TABLE_ADDR_WIDTH = 10
 )
 (
   input                clk_i,
   input                rst_i,
 
   ht_if.slave          ht_in,
-  ht_if.master         ht_out,
+  ht_res_if.master     ht_res_out,
   
   head_table_if.master head_table_if,
 
@@ -18,6 +20,7 @@ module data_table #(
   output logic         clear_ram_done_o
 
 );
+localparam HEAD_PTR_WIDTH = TABLE_ADDR_WIDTH;
 
 ht_if #( 
   .KEY_WIDTH      ( KEY_WIDTH      ),
@@ -41,8 +44,8 @@ localparam A_WIDTH = HEAD_PTR_WIDTH;
 logic [A_WIDTH-1:0]    wr_addr;
 logic [A_WIDTH-1:0]    rd_addr;
 
-head_ram_data_t        wr_data;
-head_ram_data_t        rd_data;
+ram_data_t             wr_data;
+ram_data_t             rd_data;
 logic                  wr_en;
 
 // flag for reading from pipelined stage
@@ -96,8 +99,8 @@ always_comb
 assign back_read = ( next_state == KEY_NO_MATCH_HAVE_NEXT_PTR );
 
 // clear RAM stuff
-logic                        clear_ram_flag;
-logic [ADDR_WIDTH_WIDTH-1:0] clear_addr;
+logic               clear_ram_flag;
+logic [A_WIDTH-1:0] clear_addr;
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
@@ -122,8 +125,7 @@ always_ff @( posedge clk_i or posedge rst_i )
         clear_addr <= clear_addr + 1'd1;
 
 assign wr_addr          = ( clear_ram_flag ) ? ( clear_addr ) : ( 'x ); //FIXME
-assign wr_data.ptr      = ( clear_ram_flag ) ? ( '0         ) : ( 'x );
-assign wr_data.ptr_val  = ( clear_ram_flag ) ? ( 1'b0       ) : ( 'x );
+assign wr_data          = ( clear_ram_flag ) ? ( '0         ) : ( 'x );
 assign wr_en            = ( clear_ram_flag ) ? ( 1'b1       ) : ( 'x ); 
 assign clear_ram_done_o = clear_ram_flag && ( clear_addr == '1 );
 

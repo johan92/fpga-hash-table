@@ -1,9 +1,11 @@
+import hash_table::*;
+
 module ht_delay #(
   // interface settings
   parameter KEY_WIDTH      = 32,
   parameter VALUE_WIDTH    = 16,
   parameter BUCKET_WIDTH   = 8,
-  parameter HEAD_PTR_WIDTH = 10
+  parameter HEAD_PTR_WIDTH = 10,
 
   // delay ticks
   parameter DELAY          = 1,

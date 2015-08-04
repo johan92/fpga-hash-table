@@ -40,7 +40,7 @@ modport slave(
   input  head_ptr,
   input  head_ptr_val,
   input  valid,
-  output ready,
+  output ready
 );
 
 endinterface

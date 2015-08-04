@@ -1,12 +1,12 @@
 package hash_table;
 
-  enum int unsigned {
+  typedef enum int unsigned {
     SEARCH,
     INSERT,
     DELETE
   } ht_cmd_t;
 
-  enum int unsigned {
+  typedef enum int unsigned {
     SEARCH_FOUND,
     SEARCH_NOT_FOUND,
 
@@ -18,7 +18,7 @@ package hash_table;
     DELETE_NOT_SUCCESS_NO_ENTRY
   } ht_res_t;
   
-  enum int unsigned {
+  typedef enum int unsigned {
     READ_NO_HEAD,
     KEY_MATCH,
     KEY_NO_MATCH_HAVE_NEXT_PTR,

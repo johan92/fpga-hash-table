@@ -103,7 +103,7 @@ ht_if #(
   .KEY_WIDTH      ( KEY_WIDTH        ),
   .VALUE_WIDTH    ( VALUE_WIDTH      ),
   .BUCKET_WIDTH   ( BUCKET_WIDTH     ),
-  .HEAD_PTR_WIDTH ( TABLE_ADDR_WIDTH )
+  .HEAD_PTR_WIDTH ( HEAD_PTR_WIDTH   )
 ) ht_w_head_ptr ( 
   .clk            ( clk_i       ) 
 );
@@ -132,8 +132,8 @@ assign ht_out.cmd          = ht_in_d1.cmd;
 
 assign ht_out.bucket       = ht_in_d1.bucket;
 
-assign ht_out.head_ptr     = rd_data.head_ptr; 
-assign ht_out.head_ptr_val = rd_data.head_ptr_val;
+assign ht_out.head_ptr     = rd_data.ptr; 
+assign ht_out.head_ptr_val = rd_data.ptr_val;
 
 assign ht_out.valid        = ht_in_d1.valid;
 
