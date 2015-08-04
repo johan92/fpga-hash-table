@@ -68,8 +68,7 @@ assign ht_in.head_ptr      = '0;
 assign ht_in.head_ptr_val  = '0;
 
 assign ht_in.valid         = ht_task_in.valid;
-assign ht_task_in.valid    = ht_in.ready;
-
+assign ht_task_in.ready    = ht_in.ready;
 
 calc_hash #(
   .KEY_WIDTH                              ( KEY_WIDTH            ),

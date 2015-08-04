@@ -41,7 +41,7 @@ generate
 
       // dummy hash - just selecing high bits in key like bucket number
       // it can be really helpfull to test hashtable
-      assign bucket = ht_in.key[ KEY_WIDTH : KEY_WIDTH - BUCKET_WIDTH + 1 ];
+      assign bucket = ht_in.key[ KEY_WIDTH -1 : KEY_WIDTH - BUCKET_WIDTH ];
     end
 
   if( ( HASH_TYPE != "crc32" ) && ( HASH_TYPE != "dummy") )

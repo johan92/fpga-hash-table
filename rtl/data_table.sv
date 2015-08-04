@@ -148,6 +148,8 @@ ht_delay #(
 
 );
 
+assign ht_in_d1.ready = ht_res_out.ready;
+
 true_dual_port_ram_single_clock #( 
   .DATA_WIDTH                             ( D_WIDTH           ), 
   .ADDR_WIDTH                             ( A_WIDTH           ), 
