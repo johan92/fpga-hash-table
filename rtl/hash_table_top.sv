@@ -56,6 +56,11 @@ logic     head_table_clear_ram_done;
 logic     data_table_clear_ram_run;
 logic     data_table_clear_ram_done;
 
+// FIXME : it should be from auto from reset
+assign head_table_clear_ram_run = 1'b0;
+assign data_table_clear_ram_run = 1'b0;
+
+
 // just reassigning to ht_in interface
 // zeroing bucket and head_ptr stuff because there no data about it
 // at this pipeline stage
