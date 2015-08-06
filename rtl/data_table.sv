@@ -1,12 +1,6 @@
 import hash_table::*;
 
-module data_table #( 
-  parameter KEY_WIDTH        = 32,
-  parameter VALUE_WIDTH      = 16,
-  parameter BUCKET_WIDTH     = 8,
-  parameter TABLE_ADDR_WIDTH = 10
-)
-(
+module data_table( 
   input                clk_i,
   input                rst_i,
 
@@ -20,23 +14,10 @@ module data_table #(
   output logic         clear_ram_done_o
 
 );
-localparam HEAD_PTR_WIDTH = TABLE_ADDR_WIDTH;
 
-ht_if #( 
-  .KEY_WIDTH      ( KEY_WIDTH      ),
-  .VALUE_WIDTH    ( VALUE_WIDTH    ),
-  .BUCKET_WIDTH   ( BUCKET_WIDTH   ),
-  .HEAD_PTR_WIDTH ( HEAD_PTR_WIDTH )
-) ht_in_d1 ( 
+ht_if ht_in_d1( 
   .clk            ( clk_i          ) 
 );
-
-typedef struct packed {
-  logic [KEY_WIDTH-1:0]      key;
-  logic [VALUE_WIDTH-1:0]    value;
-  logic [HEAD_PTR_WIDTH-1:0] next_ptr;
-  logic                      next_ptr_val;
-} ram_data_t; 
 
 localparam D_WIDTH = $bits( ram_data_t );
 localparam A_WIDTH = HEAD_PTR_WIDTH;
@@ -125,6 +106,10 @@ assign back_read = 1'b0;
 */
 
 // ******* Empty ptr store *******
+logic [A_WIDTH-1:0] insert_empty_addr;
+logic               insert_empty_addr_val;
+logic               insert_empty_addr_rd_ack;
+
 empty_ptr_storage #(
   .A_WIDTH                                ( TABLE_ADDR_WIDTH  )
 ) empty_ptr_storage (
@@ -176,12 +161,6 @@ assign clear_ram_done_o = clear_ram_flag && ( clear_addr == '1 );
 
 
 ht_delay #(
-  .KEY_WIDTH                              ( KEY_WIDTH         ),
-  .VALUE_WIDTH                            ( VALUE_WIDTH       ),
-
-  .BUCKET_WIDTH                           ( BUCKET_WIDTH      ),
-  .HEAD_PTR_WIDTH                         ( HEAD_PTR_WIDTH    ),
-
   .DELAY                                  ( 1                 ),
   .PIPELINE_READY                         ( 0                 )
 ) ht_d1 (

@@ -1,11 +1,6 @@
-module head_table #(
+import hash_table::*;
 
-  parameter KEY_WIDTH      = 32,
-  parameter VALUE_WIDTH    = 16,
-  parameter BUCKET_WIDTH   = 8,
-  parameter HEAD_PTR_WIDTH = 10
-
-)(
+module head_table (
 
   input                        clk_i,
   input                        rst_i,
@@ -20,11 +15,6 @@ module head_table #(
   output logic                 clear_ram_done_o
 
 );
-
-typedef struct packed {
-  logic [HEAD_PTR_WIDTH-1:0] ptr;
-  logic                      ptr_val;
-} head_ram_data_t;
 
 localparam D_WIDTH = $bits( head_ram_data_t );
 localparam A_WIDTH = BUCKET_WIDTH;
@@ -90,31 +80,15 @@ assign clear_ram_done_o = clear_ram_flag && ( clear_addr == '1 );
 
 localparam TUSER_WIDTH = $bits( head_ram_data_t );
 
-ht_if #( 
-  .KEY_WIDTH      ( KEY_WIDTH      ),
-  .VALUE_WIDTH    ( VALUE_WIDTH    ),
-  .BUCKET_WIDTH   ( BUCKET_WIDTH   ),
-  .HEAD_PTR_WIDTH ( HEAD_PTR_WIDTH )
-) ht_in_d1 ( 
+ht_if ht_in_d1( 
   .clk            ( clk_i          ) 
 );
 
-ht_if #( 
-  .KEY_WIDTH      ( KEY_WIDTH        ),
-  .VALUE_WIDTH    ( VALUE_WIDTH      ),
-  .BUCKET_WIDTH   ( BUCKET_WIDTH     ),
-  .HEAD_PTR_WIDTH ( HEAD_PTR_WIDTH   )
-) ht_w_head_ptr ( 
+ht_if ht_w_head_ptr ( 
   .clk            ( clk_i       ) 
 );
 
 ht_delay #(
-  .KEY_WIDTH                              ( KEY_WIDTH         ),
-  .VALUE_WIDTH                            ( VALUE_WIDTH       ),
-
-  .BUCKET_WIDTH                           ( BUCKET_WIDTH      ),
-  .HEAD_PTR_WIDTH                         ( HEAD_PTR_WIDTH    ),
-
   .DELAY                                  ( 1                 ),
   .PIPELINE_READY                         ( 0                 )
 ) ht_d1 (
@@ -151,8 +125,8 @@ task write_to_head_ptr_ram(
 );
   head_ram_data_t _wr_data;
 
-  _wr_data.head_ptr     = _head_ptr;
-  _wr_data.head_ptr_val = _head_ptr_val;
+  _wr_data.ptr     = _head_ptr;
+  _wr_data.ptr_val = _head_ptr_val;
 
   @cb;
   force wr_data = _wr_data;

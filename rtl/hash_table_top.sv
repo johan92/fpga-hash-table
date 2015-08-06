@@ -1,12 +1,6 @@
 import hash_table::*;
 
-module hash_table_top #( 
-  parameter KEY_WIDTH        = 32,
-  parameter VALUE_WIDTH      = 16,
-  parameter BUCKET_WIDTH     = 8,
-  parameter HASH_TYPE        = "dummy",
-  parameter TABLE_ADDR_WIDTH = 10
-)(
+module hash_table_top( 
 
   input                    clk_i,
   input                    rst_i,
@@ -16,37 +10,19 @@ module hash_table_top #(
 
 );
 
-ht_if #( 
-  .KEY_WIDTH      ( KEY_WIDTH        ),
-  .VALUE_WIDTH    ( VALUE_WIDTH      ),
-  .BUCKET_WIDTH   ( BUCKET_WIDTH     ),
-  .HEAD_PTR_WIDTH ( TABLE_ADDR_WIDTH )
-) ht_in ( 
+ht_if ht_in( 
   .clk            ( clk_i       ) 
 );
 
-ht_if #( 
-  .KEY_WIDTH      ( KEY_WIDTH        ),
-  .VALUE_WIDTH    ( VALUE_WIDTH      ),
-  .BUCKET_WIDTH   ( BUCKET_WIDTH     ),
-  .HEAD_PTR_WIDTH ( TABLE_ADDR_WIDTH )
-) ht_calc_hash ( 
+ht_if ht_calc_hash( 
   .clk            ( clk_i       ) 
 );
 
-ht_if #( 
-  .KEY_WIDTH      ( KEY_WIDTH        ),
-  .VALUE_WIDTH    ( VALUE_WIDTH      ),
-  .BUCKET_WIDTH   ( BUCKET_WIDTH     ),
-  .HEAD_PTR_WIDTH ( TABLE_ADDR_WIDTH )
-) ht_head_table ( 
+ht_if ht_head_table( 
   .clk            ( clk_i            ) 
 );
 
-head_table_if #(
-  .A_WIDTH        ( BUCKET_WIDTH     ),
-  .HEAD_PTR_WIDTH ( TABLE_ADDR_WIDTH )
-) head_table_if(
+head_table_if head_table_if(
   .clk            ( clk_i            )
 );
 
@@ -75,14 +51,7 @@ assign ht_in.head_ptr_val  = '0;
 assign ht_in.valid         = ht_task_in.valid;
 assign ht_task_in.ready    = ht_in.ready;
 
-calc_hash #(
-  .KEY_WIDTH                              ( KEY_WIDTH            ),
-  .VALUE_WIDTH                            ( VALUE_WIDTH          ),
-  .BUCKET_WIDTH                           ( BUCKET_WIDTH         ),
-  .TABLE_ADDR_WIDTH                       ( TABLE_ADDR_WIDTH     ),
-  .HASH_TYPE                              ( HASH_TYPE            )
-) calc_hash (
-
+calc_hash calc_hash (
   .clk_i                                  ( clk_i                ),
   .rst_i                                  ( rst_i                ),
 
@@ -90,15 +59,7 @@ calc_hash #(
   .ht_out                                 ( ht_calc_hash         )
 );
 
-head_table #(
-
-  .KEY_WIDTH                              ( KEY_WIDTH            ),
-  .VALUE_WIDTH                            ( VALUE_WIDTH          ),
-  .BUCKET_WIDTH                           ( BUCKET_WIDTH         ),
-  .HEAD_PTR_WIDTH                         ( TABLE_ADDR_WIDTH     )
-
-) head_ptr_table (
-
+head_table head_ptr_table (
   .clk_i                                  ( clk_i                      ),
   .rst_i                                  ( rst_i                      ),
     
@@ -112,12 +73,7 @@ head_table #(
 
 );
 
-data_table #( 
-  .KEY_WIDTH                              ( KEY_WIDTH            ),
-  .VALUE_WIDTH                            ( VALUE_WIDTH          ),
-  .BUCKET_WIDTH                           ( BUCKET_WIDTH         ),
-  .TABLE_ADDR_WIDTH                       ( TABLE_ADDR_WIDTH     )
-) data_table (
+data_table data_table (
   .clk_i                                  ( clk_i                      ),
   .rst_i                                  ( rst_i                      ),
 

@@ -59,9 +59,7 @@ enum int unsigned {
 
 } ins_state, ins_next_state;
 
-logic       [A_WIDTH-1:0] insert_empty_addr;
-logic                     insert_empty_addr_val;
-logic                     insert_empty_addr_rd_ack;
+/*
 
 logic       [A_WIDTH-1:0] insert_wr_addr;
 logic       [A_WIDTH-1:0] insert_rd_addr;
@@ -224,5 +222,5 @@ assign head_table_if.wr_en            = ins_head_table_wr_en;
 assign insert_empty_addr_rd_ack       = insert_en && ( ( ins_next_state == INS_NO_HEAD_PTR_WR_DATA_S  ) ||
                                                        ( ins_next_state == INS_ON_TAIL_UPD_NEXT_PTR_S ) );
 
-
+*/
 endmodule

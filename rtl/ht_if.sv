@@ -1,11 +1,6 @@
 import hash_table::*;
 
-interface ht_if #( 
-  parameter KEY_WIDTH      = 32,
-  parameter VALUE_WIDTH    = 16,
-  parameter BUCKET_WIDTH   = 8,
-  parameter HEAD_PTR_WIDTH = 10
-)( 
+interface ht_if( 
   input clk 
 );
 

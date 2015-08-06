@@ -1,12 +1,6 @@
 import hash_table::*;
 
-module calc_hash #(
-  parameter KEY_WIDTH        = 32,
-  parameter VALUE_WIDTH      = 16,
-  parameter BUCKET_WIDTH     = 8,
-  parameter TABLE_ADDR_WIDTH = 10,
-  parameter HASH_TYPE        = "dummy"
-)(
+module calc_hash (
 
   input                    clk_i,
   input                    rst_i,
@@ -54,12 +48,7 @@ generate
     end
 endgenerate
 
-ht_if #( 
-  .KEY_WIDTH      ( KEY_WIDTH        ),
-  .VALUE_WIDTH    ( VALUE_WIDTH      ),
-  .BUCKET_WIDTH   ( BUCKET_WIDTH     ),
-  .HEAD_PTR_WIDTH ( TABLE_ADDR_WIDTH )
-) ht_w_buck ( 
+ht_if ht_w_buck ( 
   .clk         ( clk_i       ) 
 );
 
@@ -76,12 +65,6 @@ assign ht_w_buck.valid        = ht_in.valid;
 assign ht_in.ready            = ht_w_buck.ready;
 
 ht_delay #(
-  .KEY_WIDTH                              ( KEY_WIDTH         ),
-  .VALUE_WIDTH                            ( VALUE_WIDTH       ),
-
-  .BUCKET_WIDTH                           ( BUCKET_WIDTH      ),
-  .HEAD_PTR_WIDTH                         ( TABLE_ADDR_WIDTH  ),
-
   .DELAY                                  ( 1                 ),
   .PIPELINE_READY                         ( 0                 )
 ) ht_d1 (

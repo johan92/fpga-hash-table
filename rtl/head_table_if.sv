@@ -1,6 +1,7 @@
+import hash_table::*;
+
 interface head_table_if #(
-  parameter A_WIDTH        = 8,
-  parameter HEAD_PTR_WIDTH = 10
+  parameter A_WIDTH = BUCKET_WIDTH
 )(
   input clk
 );
