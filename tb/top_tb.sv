@@ -61,6 +61,13 @@ endtask
 initial
   begin
     wait( rst_done )
+    dut.head_ptr_table.write_to_head_ptr_ram( 1, 1, 1'b1 );
+    dut.head_ptr_table.write_to_head_ptr_ram( 2, 7, 1'b1 );
+
+    dut.data_table.write_to_data_ram( 1, 32'h01_00_00_00, 16'h1234, 2, 1'b1 );
+    dut.data_table.write_to_data_ram( 2, 32'h01_00_00_01, 16'h5678, 0, 1'b0 );
+    
+    dut.data_table.write_to_data_ram( 7, 32'h02_00_00_00, 16'hABCD, 0, 1'b0 );
 
     ht_task( 32'h01_00_00_00, 16'hAABB, SEARCH ); 
     

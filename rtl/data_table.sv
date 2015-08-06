@@ -69,35 +69,7 @@ logic key_match;
 
 assign key_match = ( rd_data.key == ht_in_d1.key );
 
-ht_data_table_state_t state;
-ht_data_table_state_t next_state;
-
-always_comb
-  begin
-    next_state = state;
-
-    // no head on this bucket
-    if( !ht_in_d1.head_ptr_val )
-      begin
-        next_state = READ_NO_HEAD;
-      end
-    else
-      if( key_match )
-        begin
-          next_state = KEY_MATCH;
-        end
-      else
-        if( !key_match && rd_data.next_ptr_val )
-          begin
-            next_state = KEY_NO_MATCH_HAVE_NEXT_PTR;
-          end
-        else
-          begin
-            next_state = GOT_TAIL;
-          end
-  end
-
-assign back_read = ( next_state == KEY_NO_MATCH_HAVE_NEXT_PTR );
+assign back_read = 1'b0; 
 
 // ******* Search Data logic *******
 /*
@@ -111,66 +83,6 @@ assign back_read = ( next_state == KEY_NO_MATCH_HAVE_NEXT_PTR );
         SEARCH_NOT_SUCCESS_NO_ENTRY
 */
 
-// ******* Insert Data logic *******
-
-/*
-Insert algo:
-  if( no valid head_ptr )
-    begin
-      goto: get new empty addr
-    end
-  else
-    begin
-      start seaching - tring to find data with the same key
-      at the end of the search we will be at tail of chain
-
-      if( key matched )
-        just update data in this addr, 
-        INSERT_SUCCESS_SAME_KEY
-    end
-
-  get new empty addr:
-    if( no empty addr - table is full )
-      INSERT_NOT_SUCCESS_TABLE_IS_FULL
-    else
-      if( it was no valid head ptr ) 
-        begin
-          update info about head ptr in head table
-          write data in addr, next_ptr is null
-
-          INSERT_SUCCESS
-        end
-      // there was some data in chain, so, just adding at end of chain
-      else
-        begin
-          write data in addr, next_ptr is null
-          update ptr in previous chain addr
-
-          INSERT_SUCCESS
-        end
-*/
-
-logic       [A_WIDTH-1:0] insert_empty_addr;
-logic                     insert_empty_addr_val;
-logic                     insert_empty_addr_rd_ack;
-
-logic       [A_WIDTH-1:0] insert_wr_addr;
-ram_data_t                insert_wr_data_add_chain;
-ram_data_t                insert_wr_data_new_key;
-logic                     insert_wr_en;
-
-always_comb
-  begin
-    insert_wr_data_add_chain              = rd_data;
-    
-    insert_wr_data_add_chain.next_ptr     = insert_empty_addr;
-    insert_wr_data_add_chain.next_ptr_val = 1'b1;
-  end
-
-assign insert_wr_data_new_key.key          = ht_d1.key;
-assign insert_wr_data_new_key.value        = ht_d1.value;
-assign insert_wr_data_new_key.next_ptr     = '0;
-assign insert_wr_data_new_key.next_ptr_val = 1'b0;
 
 // ******* Delete Data Logic *******
 /*
@@ -300,5 +212,43 @@ true_dual_port_ram_single_clock #(
   .we_b                                   ( wr_en             ),
   .q_b                                    (                   )
 );
+
+// synthesis translate_off
+
+clocking cb @( posedge clk_i );
+endclocking
+
+task write_to_data_ram( 
+  input bit [TABLE_ADDR_WIDTH-1:0] _addr, 
+        bit [KEY_WIDTH-1:0]        _key,
+        bit [VALUE_WIDTH-1:0]      _value,
+        bit [TABLE_ADDR_WIDTH-1:0] _next_ptr,
+        bit                        _next_ptr_val 
+);
+  ram_data_t _wr_data;
+
+  _wr_data.key          = _key;          
+  _wr_data.value        = _value;        
+  _wr_data.next_ptr     = _next_ptr;     
+  _wr_data.next_ptr_val = _next_ptr_val;
+
+  @cb;
+  force wr_data = _wr_data;
+  force wr_addr = _addr;
+  force wr_en   = 1'b0;
+
+  @cb;
+  force wr_en   = 1'b1;
+  
+  @cb;
+  force wr_en   = 1'b0;
+  
+  @cb;
+  release wr_data; 
+  release wr_addr;
+  release wr_en;
+endtask                            
+
+// synthesis translate_on
 
 endmodule

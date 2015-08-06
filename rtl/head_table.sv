@@ -139,4 +139,38 @@ assign ht_out.valid        = ht_in_d1.valid;
 
 assign ht_in_d1.ready      = ht_out.ready;
 
+
+// synthesis translate_off
+clocking cb @( posedge clk_i );
+endclocking
+
+task write_to_head_ptr_ram(
+  input bit [BUCKET_WIDTH-1:0]   _addr,
+        bit [HEAD_PTR_WIDTH-1:0] _head_ptr,
+        bit                      _head_ptr_val
+);
+  head_ram_data_t _wr_data;
+
+  _wr_data.head_ptr     = _head_ptr;
+  _wr_data.head_ptr_val = _head_ptr_val;
+
+  @cb;
+  force wr_data = _wr_data;
+  force wr_addr = _addr;
+  force wr_en   = 1'b0;
+
+  @cb;
+  force wr_en   = 1'b1;
+
+  @cb;
+  force wr_en   = 1'b0;
+
+  @cb;
+  release wr_data;
+  release wr_addr;
+  release wr_en;
+
+endtask
+// synthesis translate_on
+
 endmodule
