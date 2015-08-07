@@ -1,9 +1,6 @@
 import hash_table::*;
 
-interface ht_res_if #( 
-  parameter KEY_WIDTH      = 32,
-  parameter VALUE_WIDTH    = 16
-)( 
+interface ht_res_if( 
   input clk 
 );
 

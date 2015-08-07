@@ -52,17 +52,6 @@ assign key_match = ( rd_data.key == ht_in_d1.key );
 
 assign back_read = 1'b0; 
 
-// ******* Search Data logic *******
-/*
-  Search algo:
-    if( no valid head_ptr )
-      SEARCH_NOT_SUCCESS_NO_ENTRY
-    else
-      if( key and data matched )
-        SEARCH_FOUND
-      else
-        SEARCH_NOT_SUCCESS_NO_ENTRY
-*/
 
 
 // ******* Delete Data Logic *******

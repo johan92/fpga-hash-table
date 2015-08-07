@@ -43,5 +43,16 @@ package hash_table;
     logic [HEAD_PTR_WIDTH-1:0] next_ptr;
     logic                      next_ptr_val;
   } ram_data_t; 
+  
+  typedef struct packed {
+    logic  [KEY_WIDTH-1:0]      key;
+    logic  [VALUE_WIDTH-1:0]    value;
+    ht_cmd_t                    cmd;
+
+    logic  [BUCKET_WIDTH-1:0]   bucket;
+
+    logic  [HEAD_PTR_WIDTH-1:0] head_ptr;
+    logic                       head_ptr_val;
+  } ht_data_task_t;
 
 endpackage
