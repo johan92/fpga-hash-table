@@ -57,9 +57,12 @@ initial
     
     dut.data_table.write_to_data_ram( 7, 32'h02_00_00_00, 16'hABCD, 0, 1'b0 );
 
-    ht_task( 32'h01_00_00_00, 16'hAABB, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_01, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+
     
-    ht_task( 32'h02_00_00_00, 16'hAABB, INSERT ); 
+    ht_task( 32'h02_00_00_00, 16'hAABB, SEARCH ); 
 
   end
 

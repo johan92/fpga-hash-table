@@ -81,7 +81,7 @@ always_comb
                 next_state = KEY_MATCH_S;
               else
                 if( got_tail )
-                  next_state = GOT_TAIL;
+                  next_state = ON_TAIL_S;
                 else
                   // going forward on chain
                   next_state = GO_ON_CHAIN_S;
@@ -112,7 +112,7 @@ always_ff @( posedge clk_i or posedge rst_i )
 
 
 assign key_match = ( task_locked.key == rd_data_i.key );
-assign got_tail  = ( rd_avail_i.next_ptr_val == 1'b0  );
+assign got_tail  = ( rd_data_i.next_ptr_val == 1'b0  );
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
@@ -122,7 +122,7 @@ always_ff @( posedge clk_i or posedge rst_i )
       rd_addr <= task_i.head_ptr;
     else
       if( rd_data_val_i && ( next_state == GO_ON_CHAIN_S ) )
-        rd_addr <= rd_data_i.head_ptr;
+        rd_addr <= rd_data_i.next_ptr;
 
 assign rd_en_o = rd_avail_i && ( ( state == READ_HEAD_S ) || ( state == GO_ON_CHAIN_S ) );
 
@@ -134,9 +134,9 @@ always_ff @( posedge clk_i or posedge rst_i )
       found_value <= rd_data_i.value;
 
 
-assign ht_res_if.key    = task_locked.key
+assign ht_res_if.key    = task_locked.key;
 assign ht_res_if.value  = found_value;
-assign ht_res_if.cmd    = task_locked.cmd;
+assign ht_res_if.cmd    = SEARCH; // FIXME WTF //task_locked.cmd;
 assign ht_res_if.res    = ( state == KEY_MATCH_S ) ? ( SEARCH_FOUND                ):
                                                      ( SEARCH_NOT_SUCCESS_NO_ENTRY );
 
@@ -150,8 +150,8 @@ assign busy_o = ( state != IDLE_S );
 
 // task_run_i should be only in IDLE state
 assert property(
-  @( posedge clk_i ) disable iff rst_i
-    ( task_run_i -> ( state == IDLE_S ) )
+  @( posedge clk_i ) disable iff ( rst_i )
+    ( task_run_i |-> ( state == IDLE_S ) )
 );
 
 // synthesis translate_onf

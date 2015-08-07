@@ -29,29 +29,26 @@ ram_data_t             wr_data;
 ram_data_t             rd_data;
 logic                  wr_en;
 
-// flag for reading from pipelined stage
-logic                  back_read;
-
 logic                  rd_en;
-logic                  rd_data_val;
 
-assign rd_addr = back_read ? ( rd_data.next_ptr ) : ( ht_in.head_ptr );
+data_table_search_wrapper #( 
+  .ENGINES_CNT                            ( 3                 ),
+  .RAM_LATENCY                            ( 2                 )
+) search_wr (
 
-assign rd_en   = back_read || ( ht_in.ready && ht_in.valid );
+  .clk_i                                  ( clk_i             ),
+  .rst_i                                  ( rst_i             ),
+    
+  .ht_if                                  ( ht_in             ),
 
-// RAM got 1 tick delay
-always_ff @( posedge clk_i or posedge rst_i )
-  if( rst_i )
-    rd_data_val <= 1'b0;
-  else
-    rd_data_val <= rd_en;
+    //ht_res_if.master      ht_res_if,
 
-logic key_match;
+  .rd_data_i                              ( rd_data           ),
 
-assign key_match = ( rd_data.key == ht_in_d1.key );
+  .rd_addr_o                              ( rd_addr           ),
+  .rd_en_o                                ( rd_en             )
 
-assign back_read = 1'b0; 
-
+);
 
 
 // ******* Delete Data Logic *******
@@ -149,6 +146,7 @@ assign wr_en            = ( clear_ram_flag ) ? ( 1'b1       ) : ( 'x );
 assign clear_ram_done_o = clear_ram_flag && ( clear_addr == '1 );
 
 
+/*
 ht_delay #(
   .DELAY                                  ( 1                 ),
   .PIPELINE_READY                         ( 0                 )
@@ -162,6 +160,7 @@ ht_delay #(
 );
 
 assign ht_in_d1.ready = ht_res_out.ready;
+*/
 
 true_dual_port_ram_single_clock #( 
   .DATA_WIDTH                             ( D_WIDTH           ), 
