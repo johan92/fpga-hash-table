@@ -7,7 +7,7 @@ package hash_table;
   parameter TABLE_ADDR_WIDTH = 10;
   parameter HEAD_PTR_WIDTH   = TABLE_ADDR_WIDTH;
 
-  typedef enum int unsigned {
+  typedef enum logic [1:0] {
     SEARCH,
     INSERT,
     DELETE
@@ -54,5 +54,13 @@ package hash_table;
     logic  [HEAD_PTR_WIDTH-1:0] head_ptr;
     logic                       head_ptr_val;
   } ht_data_task_t;
+
+  typedef struct packed {
+    logic    [KEY_WIDTH-1:0]    key;
+    logic    [VALUE_WIDTH-1:0]  value;
+
+    ht_cmd_t                    cmd;
+    ht_res_t                    res;
+  } ht_result_t;
 
 endpackage

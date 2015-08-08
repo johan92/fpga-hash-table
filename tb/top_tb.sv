@@ -32,18 +32,30 @@ initial
 
 // FIXME - now we don't care about ready  
 task ht_task( input bit [KEY_WIDTH-1:0] _key, bit [VALUE_WIDTH-1:0] _value, ht_cmd_t _cmd );
-  repeat( 20 ) @( posedge clk );
-  @( posedge clk );
+  //repeat( 20 ) @( posedge clk );
+  //@( posedge clk );
+
   ht_task_in.key   <= _key;
   ht_task_in.value <= _value;
   ht_task_in.cmd   <= _cmd;
-  ht_task_in.valid <= 1'b0;
-  
-  @( posedge clk );
   ht_task_in.valid <= 1'b1;
   
   @( posedge clk );
+
+  forever
+    begin
+      if( ht_task_in.ready == 1'b0 )
+        begin
+          @( posedge clk );
+        end
+      else
+        begin
+          break;
+        end
+    end
+
   ht_task_in.valid <= 1'b0;
+  
 endtask
 
 initial
@@ -56,13 +68,35 @@ initial
     dut.data_table.write_to_data_ram( 2, 32'h01_00_00_01, 16'h5678, 0, 1'b0 );
     
     dut.data_table.write_to_data_ram( 7, 32'h02_00_00_00, 16'hABCD, 0, 1'b0 );
-
+    
+    @( posedge clk );
     ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    ht_task( 32'h01_00_00_01, 16'h0000, SEARCH ); 
     ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
+    //ht_task( 32'h01_00_00_01, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
 
     
     ht_task( 32'h02_00_00_00, 16'hAABB, SEARCH ); 
+
+    ht_task( 32'h11_22_33_44, 16'h0000, SEARCH ); 
 
   end
 

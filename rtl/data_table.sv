@@ -32,22 +32,22 @@ logic                  wr_en;
 logic                  rd_en;
 
 data_table_search_wrapper #( 
-  .ENGINES_CNT                            ( 3                 ),
+  .ENGINES_CNT                            ( 5                 ),
   .RAM_LATENCY                            ( 2                 )
 ) search_wrapper (
 
   .clk_i                                  ( clk_i             ),
   .rst_i                                  ( rst_i             ),
     
-  .ht_if                                  ( ht_in             ),
-
-    //ht_res_if.master      ht_res_if,
+  .ht_if_1                                ( ht_in             ),
 
   .rd_data_i                              ( rd_data           ),
-
   .rd_addr_o                              ( rd_addr           ),
-  .rd_en_o                                ( rd_en             )
+  .rd_en_o                                ( rd_en             ),
 
+  .result_o                               (                   ),
+  .result_valid_o                         (                   ),
+  .result_ready_i                         ( 1'b1              )
 );
 
 
@@ -140,9 +140,9 @@ always_ff @( posedge clk_i or posedge rst_i )
       if( clear_ram_flag )
         clear_addr <= clear_addr + 1'd1;
 
-assign wr_addr          = ( clear_ram_flag ) ? ( clear_addr ) : ( 'x ); //FIXME
-assign wr_data          = ( clear_ram_flag ) ? ( '0         ) : ( 'x );
-assign wr_en            = ( clear_ram_flag ) ? ( 1'b1       ) : ( 'x ); 
+assign wr_addr          = '0; // ( clear_ram_flag ) ? ( clear_addr ) : ( 'x ); //FIXME
+assign wr_data          = '0; // ( clear_ram_flag ) ? ( '0         ) : ( 'x );
+assign wr_en            = '0; // ( clear_ram_flag ) ? ( 1'b1       ) : ( 'x ); 
 assign clear_ram_done_o = clear_ram_flag && ( clear_addr == '1 );
 
 

@@ -19,8 +19,11 @@ module data_table_search #(
 
   output [A_WIDTH-1:0]  rd_addr_o,
   output                rd_en_o,
+  
+  output ht_result_t    result_o,
+  output logic          result_valid_o,
+  input                 result_ready_i
 
-  ht_res_if.master      ht_res_if
 );
 
 // ******* Search Data logic *******
@@ -92,7 +95,7 @@ always_comb
       KEY_MATCH_S, ON_TAIL_S, NO_VALID_HEAD_PTR_S:
         begin
           // waiting for report accepted
-          if( ht_res_if.valid && ht_res_if.ready ) 
+          if( result_valid_o && result_ready_i ) 
             next_state = IDLE_S;
         end
 
@@ -118,7 +121,7 @@ always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
     rd_addr <= '0;
   else
-    if( next_state == READ_HEAD_S )
+    if( ( state == IDLE_S ) && ( next_state == READ_HEAD_S ) )
       rd_addr <= task_i.head_ptr;
     else
       if( rd_data_val_i && ( next_state == GO_ON_CHAIN_S ) )
@@ -134,13 +137,13 @@ always_ff @( posedge clk_i or posedge rst_i )
     if( rd_data_val_i && ( next_state == KEY_MATCH_S ) )
       found_value <= rd_data_i.value;
 
-assign ht_res_if.key    = task_locked.key;
-assign ht_res_if.value  = found_value;
-assign ht_res_if.cmd    = SEARCH; // FIXME WTF //task_locked.cmd;
-assign ht_res_if.res    = ( state == KEY_MATCH_S ) ? ( SEARCH_FOUND                ):
-                                                     ( SEARCH_NOT_SUCCESS_NO_ENTRY );
+assign result_o.key    = task_locked.key;
+assign result_o.value  = found_value;
+assign result_o.cmd    = task_locked.cmd; 
+assign result_o.res    = ( state == KEY_MATCH_S ) ? ( SEARCH_FOUND                ):
+                                                    ( SEARCH_NOT_SUCCESS_NO_ENTRY );
 
-assign ht_res_if.valid  = ( state == KEY_MATCH_S         ) ||
+assign result_valid_o   = ( state == KEY_MATCH_S         ) ||
                           ( state == ON_TAIL_S           ) ||
                           ( state == NO_VALID_HEAD_PTR_S );
 
@@ -154,6 +157,66 @@ assert property(
     ( task_run_i |-> ( state == IDLE_S ) )
 );
 
-// synthesis translate_onf
+function void print( string msg );
+  $display("%08t: %m: %s", $time, msg);
+endfunction
+
+function void print_state_transition( );
+  string msg;
+
+  if( next_state != state )
+    begin
+      $sformat( msg, "%s -> %s", state, next_state );
+      print( msg );
+    end
+
+endfunction
+
+function void print_new_task( );
+  string msg;
+
+  if( task_run_i )
+    begin
+      $sformat( msg, "SEARCH_TASK: key = 0x%x head_ptr = 0x%x head_ptr_val = 0x%x", 
+                                   task_i.key, task_i.head_ptr, task_i.head_ptr_val );
+      print( msg );
+    end
+endfunction
+
+function void print_rd_data( );
+  string msg;
+
+  if( rd_data_val_i )
+    begin
+      $sformat( msg, "RD_DATA: key = 0x%x value = 0x%x next_ptr = 0x%x, next_ptr_val = 0x%x",
+                               rd_data_i.key, rd_data_i.value, rd_data_i.next_ptr, rd_data_i.next_ptr_val );
+      print( msg );                             
+    end
+endfunction
+
+function void print_res( );
+  string msg;
+
+  if( result_valid_o && result_ready_i )
+    begin
+      $sformat( msg, "RES: key = 0x%x value = 0x%x cmd = %s res = %s", 
+                           result_o.key, result_o.value, result_o.cmd, result_o.res );
+      print( msg );
+    end
+endfunction
+
+initial
+  begin
+    forever
+      begin
+        @( posedge clk_i );
+        print_new_task( );
+        print_rd_data( );
+        print_res( );
+        print_state_transition( );
+      end
+  end
+
+// synthesis translate_on
 
 endmodule
