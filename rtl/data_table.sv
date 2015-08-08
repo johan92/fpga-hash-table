@@ -34,7 +34,7 @@ logic                  rd_en;
 data_table_search_wrapper #( 
   .ENGINES_CNT                            ( 3                 ),
   .RAM_LATENCY                            ( 2                 )
-) search_wr (
+) search_wrapper (
 
   .clk_i                                  ( clk_i             ),
   .rst_i                                  ( rst_i             ),
@@ -165,7 +165,7 @@ assign ht_in_d1.ready = ht_res_out.ready;
 true_dual_port_ram_single_clock #( 
   .DATA_WIDTH                             ( D_WIDTH           ), 
   .ADDR_WIDTH                             ( A_WIDTH           ), 
-  .REGISTER_OUT                           ( 0                 )
+  .REGISTER_OUT                           ( 1                 )
 ) data_ram (
   .clk                                    ( clk_i             ),
 

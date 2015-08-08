@@ -17,8 +17,8 @@ module data_table_search_wrapper #(
 
   input  ram_data_t     rd_data_i, 
 
-  output [A_WIDTH-1:0]  rd_addr_o,
-  output                rd_en_o
+  output logic [A_WIDTH-1:0]  rd_addr_o,
+  output logic                rd_en_o
 
 );
 localparam ENGINES_CNT_WIDTH = $clog2( ENGINES_CNT );
@@ -81,7 +81,7 @@ assign task_w.head_ptr_val = ht_if.head_ptr_val;
 genvar g;
 generate
   for( g = 0; g < ENGINES_CNT; g++ )
-    begin
+    begin : g_s_eng // generate search engines
       logic [RAM_LATENCY:1] l_rd_en_d;
 
       always_ff @( posedge clk_i or posedge rst_i )
@@ -128,5 +128,22 @@ generate
 
     end
 endgenerate
+
+always_comb
+  begin
+    // dummy selector realization
+    rd_addr_o = '0;
+    rd_en_o   = 1'b0;
+
+    for( int i = 0; i < ENGINES_CNT; i++ )
+      begin
+        if( rd_en[ i ] )
+          begin
+            rd_addr_o = rd_addr[ i ];
+            rd_en_o   = 1'b1;
+          end
+      end
+  end
+
 
 endmodule

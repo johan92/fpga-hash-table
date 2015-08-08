@@ -124,7 +124,8 @@ always_ff @( posedge clk_i or posedge rst_i )
       if( rd_data_val_i && ( next_state == GO_ON_CHAIN_S ) )
         rd_addr <= rd_data_i.next_ptr;
 
-assign rd_en_o = rd_avail_i && ( ( state == READ_HEAD_S ) || ( state == GO_ON_CHAIN_S ) );
+assign rd_addr_o = rd_addr;
+assign rd_en_o   = rd_avail_i && ( ( state == READ_HEAD_S ) || ( state == GO_ON_CHAIN_S ) );
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
@@ -132,7 +133,6 @@ always_ff @( posedge clk_i or posedge rst_i )
   else
     if( rd_data_val_i && ( next_state == KEY_MATCH_S ) )
       found_value <= rd_data_i.value;
-
 
 assign ht_res_if.key    = task_locked.key;
 assign ht_res_if.value  = found_value;
