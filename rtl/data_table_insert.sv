@@ -1,8 +1,3 @@
-import hash_table::*;
-
-module data_table_insert(
-
-);
 // ******* Insert Data logic *******
 
 /*
@@ -42,185 +37,231 @@ Insert algo:
         end
 */
 
-enum int unsigned {
-  INS_IDLE_S,
- 
-  INS_GO_ON_CHAIN_S,
+import hash_table::*;
 
-  INS_KEY_MATCH_S,
-
-  INS_NO_EMPTY_ADDR_S,
-
-  INS_NO_HEAD_PTR_WR_HEAD_PTR_S,
-  INS_NO_HEAD_PTR_WR_DATA_S,
+module data_table_insert #(
+  parameter RAM_LATENCY = 2,
+  parameter A_WIDTH     = TABLE_ADDR_WIDTH
+) (
+  input                       clk_i,
+  input                       rst_i,
   
-  INS_ON_TAIL_WR_DATA_S,
-  INS_ON_TAIL_UPD_NEXT_PTR_S
+  input  ht_data_task_t       task_i,
+  input                       task_valid_i,
+  output                      task_ready_o,
+  
+  // to data RAM
+  input  ram_data_t           rd_data_i,
+  output logic [A_WIDTH-1:0]  rd_addr_o,
+  output logic                rd_en_o,
 
-} ins_state, ins_next_state;
+  output logic [A_WIDTH-1:0]  wr_addr_o,
+  output ram_data_t           wr_data_o,
+  output logic                wr_en_o,
+  
+  // to empty pointer storage
+  input  [A_WIDTH-1:0]        empty_addr_i,
+  input                       empty_addr_val_i,
+  output logic                empty_addr_rd_ack_o,                 
 
-/*
+  head_table_if.master        head_table_if,
 
-logic       [A_WIDTH-1:0] insert_wr_addr;
-logic       [A_WIDTH-1:0] insert_rd_addr;
-logic                     insert_rd_en;
-logic       [A_WIDTH-1:0] insert_prev_rd_addr;
+  // output interface with search result
+  output ht_result_t          result_o,
+  output logic                result_valid_o,
+  input                       result_ready_i
+);
 
-ram_data_t                insert_wr_data;
-logic                     insert_wr_en;
+enum int unsigned {
+  IDLE_S,
+  
+  READ_HEAD_S,
 
-logic                     insert_en;
+  GO_ON_CHAIN_S,
 
+  KEY_MATCH_S,
 
-logic       [BUCKET_WIDTH-1:0]   ins_head_table_wr_addr;
-logic       [HEAD_PTR_WIDTH-1:0] ins_head_table_wr_data_ptr;
-logic                            ins_head_table_wr_data_ptr_val;
-logic                            ins_head_table_wr_en;
+  NO_EMPTY_ADDR_S,
 
-assign insert_en = ( ht_in_d1.cmd == INSERT ) && rd_data_val;
+  NO_HEAD_PTR_WR_HEAD_PTR_S,
+  NO_HEAD_PTR_WR_DATA_S,
+  
+  ON_TAIL_WR_DATA_S,
+  ON_TAIL_UPD_NEXT_PTR_S
+
+} state, next_state;
+
+logic       [A_WIDTH-1:0] prev_rd_addr;
+
+logic                     no_empty_addr;
+
+ht_data_task_t          task_locked;
+logic                   key_match;
+logic                   got_tail;
+logic [A_WIDTH-1:0]     rd_addr;
+
+logic [RAM_LATENCY:1]   rd_en_d;
+logic                   rd_data_val;
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
-    ins_state <= INS_IDLE_S;
+    rd_en_d <= '0;
   else
-    if( insert_en )
-      ins_state <= ins_next_state;  
+    begin
+      rd_en_d[1] <= rd_en_o;
+
+      for( int i = 2; i <= RAM_LATENCY; i++ )
+        begin
+          rd_en_d[ i ] <= rd_en_d[ i - 1 ];
+        end
+    end
+
+// we know ram latency, so expecting data valid 
+// just delaying this tick count
+assign rd_data_val = rd_en_d[RAM_LATENCY];
+
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    state <= IDLE_S;
+  else
+    state <= next_state; 
 
 always_comb
   begin
-    ins_next_state = ins_state;
+    next_state = state;
 
-    case( ins_state )
+    case( state )
 
-      INS_IDLE_S:
+      IDLE_S:
         begin
-          // no valid head pointer
-          if( !ht_in_d1.head_ptr_val )
+          if( task_valid_i && task_ready_o )
             begin
-              // got empty addresses
-              if( !insert_empty_addr_val ) 
-                ins_next_state = INS_NO_EMPTY_ADDR_S;
+              // no valid head pointer
+              if( !task_i.head_ptr_val )
+                begin
+                  next_state = ( no_empty_addr ) ? ( NO_EMPTY_ADDR_S           ):
+                                                   ( NO_HEAD_PTR_WR_HEAD_PTR_S );
+                end
               else
-                ins_next_state = INS_NO_HEAD_PTR_WR_HEAD_PTR_S;
+                begin
+                  next_state = READ_HEAD_S;
+                end
             end
-          // got head pointer
-          else
+        end
+
+      READ_HEAD_S, GO_ON_CHAIN_S:
+        begin
+          if( rd_data_val )
             begin
               if( key_match )
-                ins_next_state = INS_KEY_MATCH_S;
+                next_state = KEY_MATCH_S;
               else
                 begin
                   // on tail
-                  if( !rd_data.next_ptr_val )
+                  if( got_tail )
                     begin
-                      if( !insert_empty_addr_val )
-                        ins_next_state = INS_ON_TAIL_WR_DATA_S;
-                      else
-                        ins_next_state = INS_NO_EMPTY_ADDR_S;
+                      next_state = ( no_empty_addr ) ? ( NO_EMPTY_ADDR_S   ):
+                                                       ( ON_TAIL_WR_DATA_S );
                     end
                   else
                     begin
-                      ins_next_state = INS_GO_ON_CHAIN_S;
+                      next_state = GO_ON_CHAIN_S;
                     end
                 end
             end
         end
 
-      INS_GO_ON_CHAIN_S:
+      KEY_MATCH_S, NO_EMPTY_ADDR_S, NO_HEAD_PTR_WR_DATA_S, ON_TAIL_UPD_NEXT_PTR_S: 
         begin
-          if( key_match )
-            ins_next_state = INS_KEY_MATCH_S;
-          else
+          if( result_valid_o && result_ready_i )
             begin
-              // on tail
-              if( !rd_data.next_ptr_val )
-                begin
-                  if( !insert_empty_addr_val )
-                    ins_next_state = INS_ON_TAIL_WR_DATA_S;
-                  else
-                    ins_next_state = INS_NO_EMPTY_ADDR_S;
-                end
-              else
-                begin
-                  ins_next_state = INS_GO_ON_CHAIN_S;
-                end
+              next_state = IDLE_S;
             end
         end
+      
+      NO_HEAD_PTR_WR_HEAD_PTR_S: next_state = NO_HEAD_PTR_WR_DATA_S;
+      ON_TAIL_WR_DATA_S:         next_state = ON_TAIL_UPD_NEXT_PTR_S;
 
-      INS_KEY_MATCH_S:               ins_next_state = INS_IDLE_S;
-      INS_NO_EMPTY_ADDR_S:           ins_next_state = INS_IDLE_S;
-      INS_NO_HEAD_PTR_WR_HEAD_PTR_S: ins_next_state = INS_NO_HEAD_PTR_WR_DATA_S;
-      INS_NO_HEAD_PTR_WR_DATA_S:     ins_next_state = INS_IDLE_S;
-      INS_ON_TAIL_WR_DATA_S:         ins_next_state = INS_ON_TAIL_UPD_NEXT_PTR_S;
-      INS_ON_TAIL_UPD_NEXT_PTR_S:    ins_next_state = INS_IDLE_S;
-      default:                       ins_next_state = INS_IDLE_S;
+      default: next_state = IDLE_S;
     endcase
   end
 
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    task_locked <= '0;
+  else
+    if( task_valid_i )
+      task_locked <= task_i;
 
-assign insert_rd_en   = insert_en && ( ins_next_state == INS_GO_ON_CHAIN_S );   
-assign insert_rd_addr = rd_data.next_ptr; 
+assign no_empty_addr = !empty_addr_val_i;
+assign key_match = ( task_locked.key == rd_data_i.key );
+assign got_tail  = ( rd_data_i.next_ptr_val == 1'b0  );
 
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    rd_addr <= '0;
+  else
+    if( ( state == IDLE_S ) && ( next_state == READ_HEAD_S ) )
+      rd_addr <= task_i.head_ptr;
+    else
+      if( rd_data_val && ( next_state == GO_ON_CHAIN_S ) )
+        rd_addr <= rd_data_i.next_ptr;
 
-assign insert_wr_en   = insert_en && 
-                        ( ins_next_state == INS_KEY_MATCH_S            ) ||
-                        ( ins_next_state == INS_NO_HEAD_PTR_WR_DATA_S  ) || 
-                        ( ins_next_state == INS_ON_TAIL_WR_DATA_S      ) ||
-                        ( ins_next_state == INS_ON_TAIL_UPD_NEXT_PTR_S ) ; 
+assign task_ready_o = ( state == IDLE_S );
+
+assign rd_en_o   = ( state == GO_ON_CHAIN_S );   
+assign rd_addr_o = rd_addr; 
+
+assign wr_en_o   = ( state == KEY_MATCH_S            ) ||
+                   ( state == NO_HEAD_PTR_WR_DATA_S  ) || 
+                   ( state == ON_TAIL_WR_DATA_S      ) ||
+                   ( state == ON_TAIL_UPD_NEXT_PTR_S ) ; 
 
 always_comb
   begin
-    insert_wr_data = rd_data;
-    insert_wr_addr = 'x;
+    wr_data_o = rd_data_i;
+    wr_addr_o = 'x;
 
-    case( ins_next_state )
-      INS_KEY_MATCH_S:
+    case( state )
+      KEY_MATCH_S:
         begin
           // just rewriting value
-          insert_wr_data.value = ht_in_d1.value;
+          wr_data_o.value = task_locked.value;
 
-          insert_wr_addr       = rd_addr;
+          wr_addr_o       = rd_addr_o;
         end
 
-      INS_NO_HEAD_PTR_WR_DATA_S, INS_ON_TAIL_WR_DATA_S:
+      NO_HEAD_PTR_WR_DATA_S, ON_TAIL_WR_DATA_S:
         begin
-          insert_wr_data.key          = ht_in_d1.key;
-          insert_wr_data.value        = ht_in_d1.value;
-          insert_wr_data.next_ptr     = '0;
-          insert_wr_data.next_ptr_val = 1'b0;
-
-          insert_wr_addr              = insert_empty_addr; 
+          wr_data_o.key          = task_locked.key;
+          wr_data_o.value        = task_locked.value;
+          wr_data_o.next_ptr     = '0;
+          wr_data_o.next_ptr_val = 1'b0;
         end
 
-      INS_ON_TAIL_UPD_NEXT_PTR_S:
+      ON_TAIL_UPD_NEXT_PTR_S:
         begin
-          insert_wr_data.next_ptr     = insert_empty_addr;
-          insert_wr_data.next_ptr_val = 1'b1;
+          wr_data_o.next_ptr     = empty_addr_i;
+          wr_data_o.next_ptr_val = 1'b1;
 
-          insert_wr_addr              = insert_prev_rd_addr; 
+          wr_addr_o              = prev_rd_addr; 
         end
       
       default:
         begin
           // do nothing
-          insert_wr_data = rd_data;
-          insert_wr_addr = 'x;
+          wr_data_o = rd_data_i;
+          wr_addr_o = 'x;
         end
     endcase
   end
 
-assign ins_head_table_wr_addr         = ht_in_d1.bucket; 
-assign ins_head_table_wr_data_ptr     = insert_empty_addr; 
-assign ins_head_table_wr_data_ptr_val = 1'b1;
-assign ins_head_table_wr_en           = ( ins_next_state == INS_NO_HEAD_PTR_WR_HEAD_PTR_S );
+assign head_table_if.wr_addr          = task_locked.bucket; 
+assign head_table_if.wr_data_ptr      = empty_addr_i; 
+assign head_table_if.wr_data_ptr_val  = 1'b1;
+assign head_table_if.wr_en            = ( state == NO_HEAD_PTR_WR_HEAD_PTR_S );
 
-assign head_table_if.wr_addr          = ins_head_table_wr_addr; 
-assign head_table_if.wr_data_ptr      = ins_head_table_wr_data_ptr;     
-assign head_table_if.wr_data_ptr_val  = ins_head_table_wr_data_ptr_val;
-assign head_table_if.wr_en            = ins_head_table_wr_en;           
+assign empty_addr_rd_ack_o            = ( ( state == NO_HEAD_PTR_WR_DATA_S  ) ||
+                                          ( state == ON_TAIL_UPD_NEXT_PTR_S ) );
 
-assign insert_empty_addr_rd_ack       = insert_en && ( ( ins_next_state == INS_NO_HEAD_PTR_WR_DATA_S  ) ||
-                                                       ( ins_next_state == INS_ON_TAIL_UPD_NEXT_PTR_S ) );
-
-*/
 endmodule

@@ -11,7 +11,12 @@ module data_table_search_wrapper #(
   input                       clk_i,
   input                       rst_i,
   
-  ht_if.slave                 ht_if_1,
+  input  ht_data_task_t       task_i,
+  input                       task_valid_i,
+  output                      task_ready_o,
+
+  // at least one task in proccess
+  output logic                task_in_proccess_o, 
   
   // reading from data RAM
   input  ram_data_t           rd_data_i, 
@@ -31,13 +36,12 @@ logic [ENGINES_CNT-1:0][A_WIDTH-1:0] rd_addr;
 logic [ENGINES_CNT-1:0]              rd_data_val;
 logic [ENGINES_CNT-1:0]              rd_en;
 logic [ENGINES_CNT-1:0]              rd_avail = 'd1;
-logic [ENGINES_CNT-1:0]              busy_w;
 
 logic [ENGINES_CNT-1:0]              send_mask = 'd1;             
 logic [ENGINES_CNT_WIDTH-1:0]        send_num;
 
-ht_data_task_t                       task_w;
-logic [ENGINES_CNT-1:0]              task_run;
+logic [ENGINES_CNT-1:0]              task_valid;
+logic [ENGINES_CNT-1:0]              task_ready_w;
 
 logic [ENGINES_CNT_WIDTH-1:0]        res_collector_num;
 
@@ -57,7 +61,7 @@ always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
     send_mask <= 'd1;
   else
-    if( ht_if_1.valid && ht_if_1.ready )
+    if( task_valid_i && task_ready_o )
       send_mask <= { send_mask[ENGINES_CNT-2:0], send_mask[ENGINES_CNT-1] };
 
 
@@ -71,17 +75,18 @@ always_comb
       end
   end
 
-assign ht_if_1.ready = !busy_w[ send_num ];
+assign task_ready_o = task_ready_w[ send_num ];
 
-assign task_w.key          = ht_if_1.key; 
-assign task_w.value        = ht_if_1.value;        
-assign task_w.cmd          = ht_if_1.cmd;          
-                                                
-assign task_w.bucket       = ht_if_1.bucket;       
-                                                
-assign task_w.head_ptr     = ht_if_1.head_ptr;     
-assign task_w.head_ptr_val = ht_if_1.head_ptr_val; 
+always_comb
+  begin
+    task_in_proccess_o = 1'b0;
 
+    for( int i = 0; i < ENGINES_CNT; i++ )
+      begin
+        if( task_ready_w[i] == 1'b0 )
+          task_in_proccess_o = 1'b1; 
+      end
+  end
 
 genvar g;
 generate
@@ -106,19 +111,17 @@ generate
       // just delaying this tick count
       assign rd_data_val[g] = l_rd_en_d[RAM_LATENCY];
       
-      assign task_run[g] = ( send_num == g ) && ( ht_if_1.ready && ht_if_1.valid );
+      assign task_valid[g] = ( send_num == g ) && ( task_ready_o && task_valid_i );
       
       data_table_search search(
         .clk_i                                  ( clk_i             ),
         .rst_i                                  ( rst_i             ),
           
+        .task_i                                 ( task_i            ),
+        .task_valid_i                           ( task_valid[g]     ),
+        .task_ready_o                           ( task_ready_w[g]   ),
+
         .rd_avail_i                             ( rd_avail[g]       ),
-          
-        .task_i                                 ( task_w            ),
-        .task_run_i                             ( task_run[g]       ),
-
-        .busy_o                                 ( busy_w[g]         ),
-
         .rd_data_i                              ( rd_data_i         ),
         .rd_data_val_i                          ( rd_data_val[g]    ),
 

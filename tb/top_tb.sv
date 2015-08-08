@@ -44,13 +44,13 @@ task ht_task( input bit [KEY_WIDTH-1:0] _key, bit [VALUE_WIDTH-1:0] _value, ht_c
 
   forever
     begin
-      if( ht_task_in.ready == 1'b0 )
+      if( ht_task_in.ready )
         begin
-          @( posedge clk );
+          break;
         end
       else
         begin
-          break;
+          @( posedge clk );
         end
     end
 

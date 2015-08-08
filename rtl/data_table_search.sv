@@ -7,13 +7,11 @@ module data_table_search #(
   input                 clk_i,
   input                 rst_i,
   
-  input                 rd_avail_i,
-  
   input  ht_data_task_t task_i,
-  input                 task_run_i,
-
-  output                busy_o,
-
+  input                 task_valid_i,
+  output                task_ready_o,
+  
+  input                 rd_avail_i,
   input  ram_data_t     rd_data_i, 
   input                 rd_data_val_i,
 
@@ -66,7 +64,7 @@ always_comb
     case( state )
       IDLE_S:
         begin
-          if( task_run_i )
+          if( task_valid_i && task_ready_o )
             begin
               if( task_i.head_ptr_val == 1'b0 )
                 next_state = NO_VALID_HEAD_PTR_S;
@@ -110,9 +108,8 @@ always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
     task_locked <= '0;
   else
-    if( task_run_i )
+    if( task_valid_i )
       task_locked <= task_i;
-
 
 assign key_match = ( task_locked.key == rd_data_i.key );
 assign got_tail  = ( rd_data_i.next_ptr_val == 1'b0  );
@@ -147,14 +144,14 @@ assign result_valid_o   = ( state == KEY_MATCH_S         ) ||
                           ( state == ON_TAIL_S           ) ||
                           ( state == NO_VALID_HEAD_PTR_S );
 
-assign busy_o = ( state != IDLE_S );
+assign task_ready_o = ( state == IDLE_S );
 
 // synthesis translate_off
 
-// task_run_i should be only in IDLE state
+// task_valid_i should be only in IDLE state
 assert property(
   @( posedge clk_i ) disable iff ( rst_i )
-    ( task_run_i |-> ( state == IDLE_S ) )
+    ( task_valid_i |-> ( state == IDLE_S ) )
 );
 
 function void print( string msg );
@@ -175,7 +172,7 @@ endfunction
 function void print_new_task( );
   string msg;
 
-  if( task_run_i )
+  if( task_valid_i )
     begin
       $sformat( msg, "SEARCH_TASK: key = 0x%x head_ptr = 0x%x head_ptr_val = 0x%x", 
                                    task_i.key, task_i.head_ptr, task_i.head_ptr_val );
