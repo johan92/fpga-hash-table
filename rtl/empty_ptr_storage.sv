@@ -51,4 +51,44 @@ always_comb
       end
   end
 
+
+// synthesis translate_off
+
+function void print( string msg );
+  $display("%08t: %m: %s", $time, msg);
+endfunction
+
+function void print_add_empty_ptr( );
+  string msg;
+
+  if( add_empty_ptr_en_i )
+    begin
+      $sformat( msg, "add_empty_ptr: 0x%x", add_empty_ptr_i );
+      print( msg );
+    end
+endfunction
+
+function void print_get_empty_ptr( );
+  string msg;
+
+  if( next_empty_ptr_rd_ack_i )
+    begin
+      $sformat( msg, "get_empty_ptr: 0x%x", next_empty_ptr_o );
+      print( msg );
+    end
+endfunction
+
+initial
+  begin
+    forever
+      begin
+        @( posedge clk_i );
+        print_add_empty_ptr( );
+        print_get_empty_ptr( );
+      end
+  end
+
+
+// synthesis translate_on
+
 endmodule

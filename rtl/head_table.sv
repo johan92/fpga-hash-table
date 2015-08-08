@@ -145,6 +145,27 @@ task write_to_head_ptr_ram(
   release wr_en;
 
 endtask
+
+function void print( string msg );
+  $display("%08t: %m: %s", $time, msg);
+endfunction
+
+function void print_wr_head_table( );
+  string msg;
+  $sformat( msg, "addr = 0x%x wr_data.ptr = 0x%x wr_data.ptr_val = 0x%x", wr_addr, wr_data.ptr, wr_data.ptr_val );
+  print( msg );
+endfunction
+
+initial
+  begin
+    forever
+      begin
+        @( posedge clk_i );
+        if( wr_en )
+          print_wr_head_table( );
+      end
+  end
+
 // synthesis translate_on
 
 endmodule

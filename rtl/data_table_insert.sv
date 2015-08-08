@@ -91,9 +91,7 @@ enum int unsigned {
 
 } state, next_state;
 
-logic       [A_WIDTH-1:0] prev_rd_addr;
-
-logic                     no_empty_addr;
+logic                   no_empty_addr;
 
 ht_data_task_t          task_locked;
 logic                   key_match;
@@ -190,7 +188,7 @@ always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
     task_locked <= '0;
   else
-    if( task_valid_i )
+    if( task_ready_o && task_valid_i )
       task_locked <= task_i;
 
 assign no_empty_addr = !empty_addr_val_i;
@@ -209,8 +207,8 @@ always_ff @( posedge clk_i or posedge rst_i )
 
 assign task_ready_o = ( state == IDLE_S );
 
-assign rd_en_o   = ( state == GO_ON_CHAIN_S );   
-assign rd_addr_o = rd_addr; 
+assign rd_en_o      = ( state == READ_HEAD_S ) || ( state == GO_ON_CHAIN_S );   
+assign rd_addr_o    = rd_addr; 
 
 assign wr_en_o   = ( state == KEY_MATCH_S            ) ||
                    ( state == NO_HEAD_PTR_WR_DATA_S  ) || 
@@ -237,6 +235,8 @@ always_comb
           wr_data_o.value        = task_locked.value;
           wr_data_o.next_ptr     = '0;
           wr_data_o.next_ptr_val = 1'b0;
+
+          wr_addr_o              = empty_addr_i; 
         end
 
       ON_TAIL_UPD_NEXT_PTR_S:
@@ -244,7 +244,7 @@ always_comb
           wr_data_o.next_ptr     = empty_addr_i;
           wr_data_o.next_ptr_val = 1'b1;
 
-          wr_addr_o              = prev_rd_addr; 
+          wr_addr_o              = rd_addr; 
         end
       
       default:
@@ -261,7 +261,104 @@ assign head_table_if.wr_data_ptr      = empty_addr_i;
 assign head_table_if.wr_data_ptr_val  = 1'b1;
 assign head_table_if.wr_en            = ( state == NO_HEAD_PTR_WR_HEAD_PTR_S );
 
+
 assign empty_addr_rd_ack_o            = ( ( state == NO_HEAD_PTR_WR_DATA_S  ) ||
                                           ( state == ON_TAIL_UPD_NEXT_PTR_S ) );
+always_comb
+  begin
+    result_o.key   = task_locked.key;
+    result_o.value = task_locked.value;
+    result_o.cmd   = task_locked.cmd;
+  end
+
+always_comb
+  begin
+    case( state )
+      KEY_MATCH_S:     result_o.res = INSERT_SUCCESS_SAME_KEY;
+      NO_EMPTY_ADDR_S: result_o.res = INSERT_NOT_SUCCESS_TABLE_IS_FULL;
+      default:         result_o.res = INSERT_SUCCESS;
+    endcase
+  end
+
+assign result_valid_o = ( state == KEY_MATCH_S            ) ||
+                        ( state == NO_EMPTY_ADDR_S        ) ||
+                        ( state == NO_HEAD_PTR_WR_DATA_S  ) ||
+                        ( state == ON_TAIL_UPD_NEXT_PTR_S );
+
+
+// synthesis translate_off
+
+function void print( string msg );
+  $display("%08t: %m: %s", $time, msg);
+endfunction
+
+function void print_state_transition( );
+  string msg;
+
+  if( next_state != state )
+    begin
+      $sformat( msg, "%s -> %s", state, next_state );
+      print( msg );
+    end
+endfunction
+
+function void print_new_task( );
+  string msg;
+
+  if( task_valid_i && task_ready_o )
+    begin
+      $sformat( msg, "INSERT_TASK: key = 0x%x head_ptr = 0x%x head_ptr_val = 0x%x", 
+                                   task_i.key, task_i.head_ptr, task_i.head_ptr_val );
+      print( msg );
+    end
+endfunction
+
+function void print_rd_data( );
+  string msg;
+
+  if( rd_data_val )
+    begin
+      $sformat( msg, "RD_DATA: key = 0x%x value = 0x%x next_ptr = 0x%x, next_ptr_val = 0x%x",
+                               rd_data_i.key, rd_data_i.value, rd_data_i.next_ptr, rd_data_i.next_ptr_val );
+      print( msg );                             
+    end
+endfunction
+
+function void print_wr_data( );
+  string msg;
+
+  if( wr_en_o )
+    begin
+      $sformat( msg, "WR_DATA: addr = 0x%x key = 0x%x value = 0x%x next_ptr = 0x%x, next_ptr_val = 0x%x",
+                               wr_addr_o, wr_data_o.key, wr_data_o.value, wr_data_o.next_ptr, wr_data_o.next_ptr_val );
+      print( msg );                             
+    end
+endfunction
+
+function void print_res( );
+  string msg;
+
+  if( result_valid_o && result_ready_i )
+    begin
+      $sformat( msg, "INSERT_RES: key = 0x%x value = 0x%x cmd = %s res = %s", 
+                                  result_o.key, result_o.value, result_o.cmd, result_o.res );
+      print( msg );
+    end
+endfunction
+
+initial
+  begin
+    forever
+      begin
+        @( posedge clk_i );
+        print_new_task( );
+        print_rd_data( );
+        print_wr_data( );
+        print_res( );
+        print_state_transition( );
+      end
+  end
+
+// synthesis translate_on
 
 endmodule

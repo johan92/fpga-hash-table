@@ -108,7 +108,7 @@ always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
     task_locked <= '0;
   else
-    if( task_valid_i )
+    if( task_valid_i && task_ready_o )
       task_locked <= task_i;
 
 assign key_match = ( task_locked.key == rd_data_i.key );
@@ -172,7 +172,7 @@ endfunction
 function void print_new_task( );
   string msg;
 
-  if( task_valid_i )
+  if( task_valid_i && task_ready_o )
     begin
       $sformat( msg, "SEARCH_TASK: key = 0x%x head_ptr = 0x%x head_ptr_val = 0x%x", 
                                    task_i.key, task_i.head_ptr, task_i.head_ptr_val );
@@ -196,8 +196,8 @@ function void print_res( );
 
   if( result_valid_o && result_ready_i )
     begin
-      $sformat( msg, "RES: key = 0x%x value = 0x%x cmd = %s res = %s", 
-                           result_o.key, result_o.value, result_o.cmd, result_o.res );
+      $sformat( msg, "SEARCH_RES: key = 0x%x value = 0x%x cmd = %s res = %s", 
+                                  result_o.key, result_o.value, result_o.cmd, result_o.res );
       print( msg );
     end
 endfunction
