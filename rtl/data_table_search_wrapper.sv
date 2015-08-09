@@ -92,25 +92,18 @@ genvar g;
 generate
   for( g = 0; g < ENGINES_CNT; g++ )
     begin : g_s_eng // generate search engines
-      logic [RAM_LATENCY:1] l_rd_en_d;
 
-      always_ff @( posedge clk_i or posedge rst_i )
-        if( rst_i )
-          l_rd_en_d <= '0;
-        else
-          begin
-            l_rd_en_d[1] <= rd_en[g];
+      rd_data_val_helper #( 
+        .RAM_LATENCY                          ( RAM_LATENCY     ) 
+      ) rd_data_val_helper (
+        .clk_i                                ( clk_i           ),
+        .rst_i                                ( rst_i           ),
 
-            for( int i = 2; i <= RAM_LATENCY; i++ )
-              begin
-                l_rd_en_d[ i ] <= l_rd_en_d[ i - 1 ];
-              end
-          end
-      
-      // we know ram latency, so expecting data valid 
-      // just delaying this tick count
-      assign rd_data_val[g] = l_rd_en_d[RAM_LATENCY];
-      
+        .rd_en_i                              ( rd_en[g]        ),
+        .rd_data_val_o                        ( rd_data_val[g]  )
+
+      );
+
       assign task_valid[g] = ( send_num == g ) && ( task_ready_o && task_valid_i );
       
       data_table_search search(

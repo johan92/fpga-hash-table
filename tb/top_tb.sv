@@ -72,7 +72,8 @@ initial
     @( posedge clk );
     ht_task( 32'h01_00_00_00, 16'h1234, INSERT ); 
     ht_task( 32'h01_00_00_01, 16'h1235, INSERT ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_01, 16'h1235, DELETE ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
     //ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
     //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
     //ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 

@@ -53,8 +53,9 @@ logic       [A_WIDTH-1:0] add_empty_ptr;
 logic                     add_empty_ptr_en;
 
 ht_data_task_t       task_w;
-logic                task_valid [DIR_CNT-1:0];
-logic                task_ready [DIR_CNT-1:0];
+logic                task_valid       [DIR_CNT-1:0];
+logic                task_ready       [DIR_CNT-1:0];
+logic                task_proccessing [DIR_CNT-1:0];
 
 logic                search_task_in_proccess;
 
@@ -127,10 +128,10 @@ data_table_insert #(
 );
 
 data_table_delete #(
-  .RAM_LATENCY                            ( RAM_LATENCY       )
+  .RAM_LATENCY                            ( RAM_LATENCY                     )
 ) delete_engine ( 
-  .clk_i                                  ( clk_i             ),
-  .rst_i                                  ( rst_i             ),
+  .clk_i                                  ( clk_i                           ),
+  .rst_i                                  ( rst_i                           ),
     
   .task_i                                 ( task_w                          ),
   .task_valid_i                           ( task_valid       [DELETE_]      ),
@@ -156,11 +157,6 @@ data_table_delete #(
   .result_valid_o                         ( cmd_result_valid [DELETE_]      ),
   .result_ready_i                         ( cmd_result_ready [DELETE_]      )
 );
-//FIXME
-assign cmd_result_ready[ INSERT_ ] = 1'b1;
-assign cmd_result_ready[ SEARCH_ ] = 1'b1;
-assign cmd_result_ready[ DELETE_ ] = 1'b1;
-
 assign task_w.key          = ht_in.key; 
 assign task_w.value        = ht_in.value;        
 assign task_w.cmd          = ht_in.cmd;          
@@ -170,25 +166,59 @@ assign task_w.bucket       = ht_in.bucket;
 assign task_w.head_ptr     = ht_in.head_ptr;     
 assign task_w.head_ptr_val = ht_in.head_ptr_val; 
 
-assign task_valid[ SEARCH_ ] = ht_in.valid && ( task_w.cmd == SEARCH );
-assign task_valid[ INSERT_ ] = ht_in.valid && ( task_w.cmd == INSERT ) && ( !search_task_in_proccess ) );
+assign task_proccessing[ SEARCH_ ] = search_task_in_proccess;
+assign task_proccessing[ INSERT_ ] = !task_ready[ INSERT_ ];
+assign task_proccessing[ DELETE_ ] = !task_ready[ DELETE_ ];
 
 always_comb
   begin
-    ht_in.ready = 1'b1;
+    ht_in.ready           = 1'b1;
 
-    if( task_w.cmd == SEARCH )
-      begin
-        ht_in.ready = task_ready[ SEARCH_ ];
-      end
-    else
-      if( task_w.cmd == INSERT )
+    task_valid[ SEARCH_ ] = ht_in.valid && ( task_w.cmd == SEARCH );
+    task_valid[ INSERT_ ] = ht_in.valid && ( task_w.cmd == INSERT );
+    task_valid[ DELETE_ ] = ht_in.valid && ( task_w.cmd == DELETE );
+    
+    case( task_w.cmd )
+      SEARCH:
         begin
-          if( search_task_in_proccess )
-            ht_in.ready = 1'b0;
+          if( task_proccessing[ INSERT_ ] || task_proccessing[ DELETE_ ] )
+            begin
+              ht_in.ready           = 1'b0;
+              task_valid[ SEARCH_ ] = 1'b0;
+            end
+          else
+            begin
+              ht_in.ready = task_ready[ SEARCH_ ];
+            end
+        end
+
+      INSERT:
+        begin
+          if( task_proccessing[ SEARCH_ ] || task_proccessing[ DELETE_ ] )
+            begin
+              ht_in.ready           = 1'b0;
+              task_valid[ INSERT_ ] = 1'b0;
+            end
           else
             ht_in.ready = task_ready[ INSERT_ ];
         end
+
+      DELETE:
+        begin
+          if( task_proccessing[ SEARCH_ ] || task_proccessing[ INSERT_ ] )
+            begin
+              ht_in.ready           = 1'b0;
+              task_valid[ DELETE_ ] = 1'b0;
+            end
+          else
+            ht_in.ready = task_ready[ DELETE_ ];
+        end
+
+      default: 
+        begin
+          ht_in.ready = 1'b1;
+        end
+    endcase
   end
 
 
@@ -244,6 +274,41 @@ always_comb
       end
   end
 
+// ******* Muxing cmd result *******
+ht_result_t               mux_cmd_result;
+logic                     mux_cmd_result_valid; 
+
+logic [DIR_CNT_WIDTH-1:0] cmd_sel;
+
+always_comb
+  begin
+    cmd_sel = '0;
+    for( int i = 0; i < DIR_CNT; i++ )
+      begin
+        // hope only one cmd_result_valid is valid
+        if( cmd_result_valid[i] )
+          cmd_sel = i[DIR_CNT_WIDTH-1:0];
+      end
+  end
+
+assign mux_cmd_result        = cmd_result[ cmd_sel ];
+assign mux_cmd_result_valid  = cmd_result_valid[ cmd_sel ];
+
+always_comb
+  begin
+    for( int i = 0; i < DIR_CNT; i++ )
+      begin
+        cmd_result_ready[i] = !cmd_result_valid[i];
+      end
+
+    cmd_result_ready[ cmd_sel ] = ht_res_out.ready;
+  end
+
+assign ht_res_out.key   = mux_cmd_result.key;    
+assign ht_res_out.value = mux_cmd_result.value;  
+assign ht_res_out.cmd   = mux_cmd_result.cmd;    
+assign ht_res_out.res   = mux_cmd_result.res;    
+assign ht_res_out.valid = mux_cmd_result_valid; 
 
 // ******* Empty ptr store *******
 

@@ -89,7 +89,7 @@ enum int unsigned {
   ON_TAIL_WR_DATA_S,
   ON_TAIL_UPD_NEXT_PTR_S
 
-} state, next_state;
+} state, next_state, state_d1;
 
 logic                   no_empty_addr;
 
@@ -98,31 +98,33 @@ logic                   key_match;
 logic                   got_tail;
 logic [A_WIDTH-1:0]     rd_addr;
 
-logic [RAM_LATENCY:1]   rd_en_d;
 logic                   rd_data_val;
+logic                   state_first_tick;
 
-always_ff @( posedge clk_i or posedge rst_i )
-  if( rst_i )
-    rd_en_d <= '0;
-  else
-    begin
-      rd_en_d[1] <= rd_en_o;
+rd_data_val_helper #( 
+  .RAM_LATENCY                          ( RAM_LATENCY  ) 
+) rd_data_val_helper (
+  .clk_i                                ( clk_i        ),
+  .rst_i                                ( rst_i        ),
 
-      for( int i = 2; i <= RAM_LATENCY; i++ )
-        begin
-          rd_en_d[ i ] <= rd_en_d[ i - 1 ];
-        end
-    end
+  .rd_en_i                              ( rd_en_o      ),
+  .rd_data_val_o                        ( rd_data_val  )
 
-// we know ram latency, so expecting data valid 
-// just delaying this tick count
-assign rd_data_val = rd_en_d[RAM_LATENCY];
+);
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
     state <= IDLE_S;
   else
     state <= next_state; 
+
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    state_d1 <= IDLE_S;
+  else
+    state_d1 <= state;
+
+assign state_first_tick = ( state != state_d1 );
 
 always_comb
   begin
@@ -207,13 +209,14 @@ always_ff @( posedge clk_i or posedge rst_i )
 
 assign task_ready_o = ( state == IDLE_S );
 
-assign rd_en_o      = ( state == READ_HEAD_S ) || ( state == GO_ON_CHAIN_S );   
+assign rd_en_o      = state_first_tick && ( ( state == READ_HEAD_S   ) || 
+                                            ( state == GO_ON_CHAIN_S ) );   
 assign rd_addr_o    = rd_addr; 
 
-assign wr_en_o   = ( state == KEY_MATCH_S            ) ||
-                   ( state == NO_HEAD_PTR_WR_DATA_S  ) || 
-                   ( state == ON_TAIL_WR_DATA_S      ) ||
-                   ( state == ON_TAIL_UPD_NEXT_PTR_S ) ; 
+assign wr_en_o      = state_first_tick && ( ( state == KEY_MATCH_S            ) ||
+                                            ( state == NO_HEAD_PTR_WR_DATA_S  ) || 
+                                            ( state == ON_TAIL_WR_DATA_S      ) ||
+                                            ( state == ON_TAIL_UPD_NEXT_PTR_S ) ); 
 
 always_comb
   begin
@@ -259,11 +262,11 @@ always_comb
 assign head_table_if.wr_addr          = task_locked.bucket; 
 assign head_table_if.wr_data_ptr      = empty_addr_i; 
 assign head_table_if.wr_data_ptr_val  = 1'b1;
-assign head_table_if.wr_en            = ( state == NO_HEAD_PTR_WR_HEAD_PTR_S );
+assign head_table_if.wr_en            = state_first_tick && ( state == NO_HEAD_PTR_WR_HEAD_PTR_S );
 
 
-assign empty_addr_rd_ack_o            = ( ( state == NO_HEAD_PTR_WR_DATA_S  ) ||
-                                          ( state == ON_TAIL_UPD_NEXT_PTR_S ) );
+assign empty_addr_rd_ack_o            = state_first_tick && ( ( state == NO_HEAD_PTR_WR_DATA_S  ) ||
+                                                              ( state == ON_TAIL_UPD_NEXT_PTR_S ) );
 always_comb
   begin
     result_o.key   = task_locked.key;

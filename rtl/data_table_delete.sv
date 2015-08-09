@@ -89,7 +89,7 @@ enum int unsigned {
 
   CLEAR_RAM_AND_PTR_S
 
-} state, next_state;
+} state, next_state, state_d1;
 
 ht_data_task_t          task_locked;
 logic                   key_match;
@@ -98,11 +98,33 @@ logic [A_WIDTH-1:0]     rd_addr;
 ram_data_t              prev_rd_data;
 logic [A_WIDTH-1:0]     prev_rd_addr;
 
+logic                   rd_data_val;
+logic                   state_first_tick;
+
+rd_data_val_helper #( 
+  .RAM_LATENCY                          ( RAM_LATENCY  ) 
+) rd_data_val_helper (
+  .clk_i                                ( clk_i        ),
+  .rst_i                                ( rst_i        ),
+
+  .rd_en_i                              ( rd_en_o      ),
+  .rd_data_val_o                        ( rd_data_val  )
+
+);
+
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
     state <= IDLE_S;
   else
     state <= next_state;
+
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    state_d1 <= IDLE_S;
+  else
+    state_d1 <= state;
+
+assign state_first_tick = ( state != state_d1 );
 
 // we need to do search, so this FSM will be similar 
 // with search FSM
@@ -135,7 +157,7 @@ always_comb
                     if( got_tail )
                       next_state = KEY_MATCH_IN_TAIL_S;
                     else
-                      next_stat = KEY_MATCH_IN_MIDDLE_S;
+                      next_state = KEY_MATCH_IN_MIDDLE_S;
                 end
               else
                 if( got_tail )
@@ -200,14 +222,14 @@ always_ff @( posedge clk_i or posedge rst_i )
 
 assign task_ready_o = ( state == IDLE_S );
 
-assign rd_en_o      = ( state == READ_HEAD_S   ) || 
-                      ( state == GO_ON_CHAIN_S );   
+assign rd_en_o      = state_first_tick && ( ( state == READ_HEAD_S   ) || 
+                                            ( state == GO_ON_CHAIN_S ) );   
 
 assign rd_addr_o    = rd_addr; 
 
-assign wr_en_o      = ( state == KEY_MATCH_IN_MIDDLE_S  ) ||
-                      ( state == KEY_MATCH_IN_TAIL_S    ) || 
-                      ( state == CLEAR_RAM_AND_PTR_S    );
+assign wr_en_o      = state_first_tick && ( ( state == KEY_MATCH_IN_MIDDLE_S  ) ||
+                                            ( state == KEY_MATCH_IN_TAIL_S    ) || 
+                                            ( state == CLEAR_RAM_AND_PTR_S    ) );
 
 always_comb
   begin
@@ -252,12 +274,12 @@ always_comb
 assign head_table_if.wr_addr          = task_locked.bucket; 
 assign head_table_if.wr_data_ptr      = rd_data_i.next_ptr;
 assign head_table_if.wr_data_ptr_val  = rd_data_i.next_ptr_val;
-assign head_table_if.wr_en            = ( state == KEY_MATCH_IN_HEAD_S );
+assign head_table_if.wr_en            = state_first_tick && ( state == KEY_MATCH_IN_HEAD_S );
 
 // ******* Empty ptr storage ******
 
 assign add_empty_ptr_o     = rd_addr;
-assign add_empty_ptr_en_o  = ( state == CLEAR_RAM_AND_PTR_S );
+assign add_empty_ptr_en_o  = state_first_tick && ( state == CLEAR_RAM_AND_PTR_S );
 
 // ******* Result calculation *******
 assign result_o.key   = task_locked.key;
@@ -271,4 +293,79 @@ assign result_o.res = ( ( state == NO_VALID_HEAD_PTR_S     ) ||
 assign result_valid_o = ( state == CLEAR_RAM_AND_PTR_S      ) ||
                         ( state == NO_VALID_HEAD_PTR_S      ) ||
                         ( state == IN_TAIL_WITHOUT_MATCH_S  );
+
+// synthesis translate_off
+function void print( string msg );
+  $display("%08t: %m: %s", $time, msg);
+endfunction
+
+function void print_state_transition( );
+  string msg;
+
+  if( next_state != state )
+    begin
+      $sformat( msg, "%s -> %s", state, next_state );
+      print( msg );
+    end
+endfunction
+
+function void print_new_task( );
+  string msg;
+
+  if( task_valid_i && task_ready_o )
+    begin
+      $sformat( msg, "DELETE_TASK: key = 0x%x head_ptr = 0x%x head_ptr_val = 0x%x", 
+                                   task_i.key, task_i.head_ptr, task_i.head_ptr_val );
+      print( msg );
+    end
+endfunction
+
+function void print_rd_data( );
+  string msg;
+
+  if( rd_data_val )
+    begin
+      $sformat( msg, "RD_DATA: key = 0x%x value = 0x%x next_ptr = 0x%x, next_ptr_val = 0x%x",
+                               rd_data_i.key, rd_data_i.value, rd_data_i.next_ptr, rd_data_i.next_ptr_val );
+      print( msg );                             
+    end
+endfunction
+
+function void print_wr_data( );
+  string msg;
+
+  if( wr_en_o )
+    begin
+      $sformat( msg, "WR_DATA: addr = 0x%x key = 0x%x value = 0x%x next_ptr = 0x%x, next_ptr_val = 0x%x",
+                               wr_addr_o, wr_data_o.key, wr_data_o.value, wr_data_o.next_ptr, wr_data_o.next_ptr_val );
+      print( msg );                             
+    end
+endfunction
+
+function void print_res( );
+  string msg;
+
+  if( result_valid_o && result_ready_i )
+    begin
+      $sformat( msg, "DELETE_RES: key = 0x%x value = 0x%x cmd = %s res = %s", 
+                                  result_o.key, result_o.value, result_o.cmd, result_o.res );
+      print( msg );
+    end
+endfunction
+
+initial
+  begin
+    forever
+      begin
+        @( posedge clk_i );
+        print_new_task( );
+        print_rd_data( );
+        print_wr_data( );
+        print_res( );
+        print_state_transition( );
+      end
+  end
+
+// synthesis translate_on
+                      
 endmodule
