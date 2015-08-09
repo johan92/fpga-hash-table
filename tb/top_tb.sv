@@ -1,5 +1,7 @@
 import hash_table::*;
 
+`include "ref_hash_table.sv"
+
 module top_tb;
 
 bit clk;
@@ -30,6 +32,8 @@ initial
     rst_done <= 1'b1;
   end
 
+ref_hash_table ref_ht;
+
 // FIXME - now we don't care about ready  
 task ht_task( input bit [KEY_WIDTH-1:0] _key, bit [VALUE_WIDTH-1:0] _value, ht_cmd_t _cmd );
   //repeat( 20 ) @( posedge clk );
@@ -56,7 +60,15 @@ task ht_task( input bit [KEY_WIDTH-1:0] _key, bit [VALUE_WIDTH-1:0] _value, ht_c
 
   ht_task_in.valid <= 1'b0;
   
+  ref_ht.do_task( _key, _value, _cmd ); 
 endtask
+
+
+initial
+  begin
+    ref_ht = new( 2**TABLE_ADDR_WIDTH );
+  end
+
 
 initial
   begin

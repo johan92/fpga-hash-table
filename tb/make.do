@@ -2,7 +2,8 @@ rm -rf work/
 vlib work
 
 # compiling files
-vlog ../rtl/hash_table_pkg.sv 
+vlog ../rtl/hash_table_pkg.sv
+vlog ref_hash_table.sv
 vlog top_tb.sv 
 vlog ../rtl/*.sv 
 vlog ../rtl/*.v 
