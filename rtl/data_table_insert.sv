@@ -226,7 +226,7 @@ always_comb
           // just rewriting value
           wr_data_o.value = task_locked.value;
 
-          wr_addr_o       = rd_addr_o;
+          wr_addr_o       = rd_addr;
         end
 
       NO_HEAD_PTR_WR_DATA_S, ON_TAIL_WR_DATA_S:

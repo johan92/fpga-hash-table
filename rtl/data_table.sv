@@ -20,8 +20,9 @@ localparam RAM_LATENCY = 2;
 
 localparam SEARCH_ = 0;
 localparam INSERT_ = 1;
-//localparam DELETE  = 2;
-localparam DIR_CNT = 2; 
+localparam DELETE_ = 2;
+
+localparam DIR_CNT = 3; 
 localparam DIR_CNT_WIDTH = $clog2( DIR_CNT );
 
 ram_data_t                ram_rd_data;
@@ -48,16 +49,27 @@ logic       [A_WIDTH-1:0] empty_addr;
 logic                     empty_addr_val;
 logic                     empty_addr_rd_ack;
 
+logic       [A_WIDTH-1:0] add_empty_ptr;
+logic                     add_empty_ptr_en;
+
 ht_data_task_t       task_w;
 logic                task_valid [DIR_CNT-1:0];
 logic                task_ready [DIR_CNT-1:0];
 
 logic                search_task_in_proccess;
 
+head_table_if head_table_insert_if( 
+  .clk( clk_i )
+);
+
+head_table_if head_table_delete_if( 
+  .clk( clk_i )
+);
+
 data_table_search_wrapper #( 
   .ENGINES_CNT                            ( 5                          ),
   .RAM_LATENCY                            ( RAM_LATENCY                )
-) search_wrapper (
+) search_engine (
 
   .clk_i                                  ( clk_i                      ),
   .rst_i                                  ( rst_i                      ),
@@ -106,7 +118,7 @@ data_table_insert #(
   .empty_addr_val_i                       ( empty_addr_val    ),
   .empty_addr_rd_ack_o                    ( empty_addr_rd_ack ),
 
-  .head_table_if                          ( head_table_if     ),
+  .head_table_if                          ( head_table_insert_if         ),
 
     // output interface with search result
   .result_o                               ( cmd_result       [INSERT_]   ),
@@ -114,9 +126,40 @@ data_table_insert #(
   .result_ready_i                         ( cmd_result_ready [INSERT_]   )
 );
 
+data_table_delete #(
+  .RAM_LATENCY                            ( RAM_LATENCY       )
+) delete_engine ( 
+  .clk_i                                  ( clk_i             ),
+  .rst_i                                  ( rst_i             ),
+    
+  .task_i                                 ( task_w                          ),
+  .task_valid_i                           ( task_valid       [DELETE_]      ),
+  .task_ready_o                           ( task_ready       [DELETE_]      ),
+
+    // to data RAM                                            
+  .rd_data_i                              ( ram_rd_data                     ),
+  .rd_addr_o                              ( rd_addr_w        [DELETE_]      ),
+  .rd_en_o                                ( rd_en_w          [DELETE_]      ),
+  
+  .wr_addr_o                              ( wr_addr_w        [DELETE_]      ),
+  .wr_data_o                              ( wr_data_w        [DELETE_]      ),
+  .wr_en_o                                ( wr_en_w          [DELETE_]      ),
+    
+    // to empty pointer storage
+  .add_empty_ptr_o                        ( add_empty_ptr                   ),
+  .add_empty_ptr_en_o                     ( add_empty_ptr_en                ),
+
+  .head_table_if                          ( head_table_delete_if            ),
+
+    // output interface with search result
+  .result_o                               ( cmd_result       [DELETE_]      ),
+  .result_valid_o                         ( cmd_result_valid [DELETE_]      ),
+  .result_ready_i                         ( cmd_result_ready [DELETE_]      )
+);
 //FIXME
 assign cmd_result_ready[ INSERT_ ] = 1'b1;
 assign cmd_result_ready[ SEARCH_ ] = 1'b1;
+assign cmd_result_ready[ DELETE_ ] = 1'b1;
 
 assign task_w.key          = ht_in.key; 
 assign task_w.value        = ht_in.value;        
@@ -127,8 +170,8 @@ assign task_w.bucket       = ht_in.bucket;
 assign task_w.head_ptr     = ht_in.head_ptr;     
 assign task_w.head_ptr_val = ht_in.head_ptr_val; 
 
-assign task_valid[ SEARCH_ ] = ht_in.valid && ( ( task_w.cmd == SEARCH ) );
-assign task_valid[ INSERT_ ] = ht_in.valid && ( ( task_w.cmd == INSERT ) && ( !search_task_in_proccess ) );
+assign task_valid[ SEARCH_ ] = ht_in.valid && ( task_w.cmd == SEARCH );
+assign task_valid[ INSERT_ ] = ht_in.valid && ( task_w.cmd == INSERT ) && ( !search_task_in_proccess ) );
 
 always_comb
   begin
@@ -182,6 +225,26 @@ assign ram_wr_addr = wr_addr_w [ wr_sel ];
 assign ram_wr_data = wr_data_w [ wr_sel ];
 assign ram_wr_en   = wr_en_w   [ wr_sel ];  
 
+// ******* MUX to head_table *******
+always_comb
+  begin
+    if( head_table_insert_if.wr_en )
+      begin
+        head_table_if.wr_addr         = head_table_insert_if.wr_addr;         
+        head_table_if.wr_data_ptr     = head_table_insert_if.wr_data_ptr;     
+        head_table_if.wr_data_ptr_val = head_table_insert_if.wr_data_ptr_val;
+        head_table_if.wr_en           = head_table_insert_if.wr_en; 
+      end
+    else
+      begin
+        head_table_if.wr_addr         = head_table_delete_if.wr_addr;         
+        head_table_if.wr_data_ptr     = head_table_delete_if.wr_data_ptr;     
+        head_table_if.wr_data_ptr_val = head_table_delete_if.wr_data_ptr_val;
+        head_table_if.wr_en           = head_table_delete_if.wr_en; 
+      end
+  end
+
+
 // ******* Empty ptr store *******
 
 empty_ptr_storage #(
@@ -191,8 +254,8 @@ empty_ptr_storage #(
   .clk_i                                  ( clk_i             ),
   .rst_i                                  ( rst_i             ),
     
-  .add_empty_ptr_i                        ( add_empty_ptr_i   ),
-  .add_empty_ptr_en_i                     ( add_empty_ptr_en_i),
+  .add_empty_ptr_i                        ( add_empty_ptr     ),
+  .add_empty_ptr_en_i                     ( add_empty_ptr_en  ),
     
   .next_empty_ptr_rd_ack_i                ( empty_addr_rd_ack ),
   .next_empty_ptr_o                       ( empty_addr        ),

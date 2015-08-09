@@ -48,7 +48,7 @@ enum int unsigned {
   READ_HEAD_S,
   GO_ON_CHAIN_S,
   KEY_MATCH_S,
-  ON_TAIL_S
+  ON_TAIL_WITHOUT_MATCH_S
 } state, next_state;
 
 always_ff @( posedge clk_i or posedge rst_i )
@@ -82,7 +82,7 @@ always_comb
                 next_state = KEY_MATCH_S;
               else
                 if( got_tail )
-                  next_state = ON_TAIL_S;
+                  next_state = ON_TAIL_WITHOUT_MATCH_S;
                 else
                   // going forward on chain
                   next_state = GO_ON_CHAIN_S;
@@ -90,7 +90,7 @@ always_comb
 
         end
         
-      KEY_MATCH_S, ON_TAIL_S, NO_VALID_HEAD_PTR_S:
+      KEY_MATCH_S, ON_TAIL_WITHOUT_MATCH_S, NO_VALID_HEAD_PTR_S:
         begin
           // waiting for report accepted
           if( result_valid_o && result_ready_i ) 
@@ -140,9 +140,9 @@ assign result_o.cmd    = task_locked.cmd;
 assign result_o.res    = ( state == KEY_MATCH_S ) ? ( SEARCH_FOUND                ):
                                                     ( SEARCH_NOT_SUCCESS_NO_ENTRY );
 
-assign result_valid_o   = ( state == KEY_MATCH_S         ) ||
-                          ( state == ON_TAIL_S           ) ||
-                          ( state == NO_VALID_HEAD_PTR_S );
+assign result_valid_o   = ( state == KEY_MATCH_S             ) ||
+                          ( state == ON_TAIL_WITHOUT_MATCH_S ) ||
+                          ( state == NO_VALID_HEAD_PTR_S     );
 
 assign task_ready_o = ( state == IDLE_S );
 
