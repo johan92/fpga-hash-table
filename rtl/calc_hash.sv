@@ -4,9 +4,14 @@ module calc_hash (
 
   input                    clk_i,
   input                    rst_i,
-  
-  ht_if.slave              ht_in,
-  ht_if.master             ht_out
+
+  input        ht_pdata_t  pdata_in_i,
+  input                    pdata_in_valid_i,
+  output                   pdata_in_ready_o,
+
+  output       ht_pdata_t  pdata_out_o,
+  output                   pdata_out_valid_o,
+  input                    pdata_out_ready_i
 
 );
 
@@ -21,8 +26,8 @@ generate
         begin
           // pure combinational
           CRC32_D32 crc32_d32(
-            .data_i                                 ( ht_in.key[31:0] ),
-            .crc32_o                                ( crc32_w          )
+            .data_i                                 ( pdata_in_i.cmd.key[31:0] ),
+            .crc32_o                                ( crc32_w                  )
           );
         end
       
@@ -35,7 +40,7 @@ generate
 
       // dummy hash - just selecing high bits in key like bucket number
       // it can be really helpfull to test hashtable
-      assign bucket = ht_in.key[ KEY_WIDTH -1 : KEY_WIDTH - BUCKET_WIDTH ];
+      assign bucket = pdata_in_i.cmd.key[ KEY_WIDTH -1 : KEY_WIDTH - BUCKET_WIDTH ];
     end
 
   if( ( HASH_TYPE != "crc32" ) && ( HASH_TYPE != "dummy") )
@@ -48,31 +53,30 @@ generate
     end
 endgenerate
 
-ht_if ht_w_buck ( 
-  .clk         ( clk_i       ) 
-);
+ht_pdata_t pdata_w_buck;
 
-assign ht_w_buck.key          = ht_in.key; 
-assign ht_w_buck.value        = ht_in.value;
-assign ht_w_buck.cmd          = ht_in.cmd;
-
-assign ht_w_buck.bucket       = bucket;
-
-assign ht_w_buck.head_ptr     = ht_in.head_ptr;
-assign ht_w_buck.head_ptr_val = ht_in.head_ptr_val;
-assign ht_w_buck.valid        = ht_in.valid;
-
-assign ht_in.ready            = ht_w_buck.ready;
+// just replacing bucket
+always_comb
+  begin
+    pdata_w_buck        = pdata_in_i;
+    pdata_w_buck.bucket = bucket;
+  end
 
 ht_delay #(
-  .DELAY                                  ( 1                 ),
-  .PIPELINE_READY                         ( 0                 )
+  .D_WIDTH                                ( $bits( pdata_out_o ) ),
+  .DELAY                                  ( 1                    ),
+  .PIPELINE_READY                         ( 0                    )
 ) ht_d1 (
-  .clk_i                                  ( clk_i             ),
-  .rst_i                                  ( rst_i             ),
+  .clk_i                                  ( clk_i                ),
+  .rst_i                                  ( rst_i                ),
 
-  .ht_in                                  ( ht_w_buck         ),
-  .ht_out                                 ( ht_out            )
+  .data_in_i                              ( pdata_w_buck         ),
+  .data_in_valid_i                        ( pdata_in_valid_i     ),
+  .data_in_ready_o                        ( pdata_in_ready_o     ),
+
+  .data_out_o                             ( pdata_out_o          ),
+  .data_out_valid_o                       ( pdata_out_valid_o    ),
+  .data_out_ready_i                       ( pdata_out_ready_i    )
 
 );
 

@@ -15,7 +15,8 @@ class ref_hash_table;
   function new( int _max_keys_cnt );
     this.max_keys_cnt  = _max_keys_cnt;
   endfunction
-  
+ 
+  /*
   function ht_result_t do_task( input bit [KEY_WIDTH-1:0]   key, 
                                       bit [VALUE_WIDTH-1:0] value,
                                       ht_cmd_t              cmd );
@@ -81,7 +82,7 @@ class ref_hash_table;
 
     return task_res;
   endfunction                          
-
+  */
 
 endclass
 

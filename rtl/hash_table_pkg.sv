@@ -8,10 +8,10 @@ package hash_table;
   parameter HEAD_PTR_WIDTH   = TABLE_ADDR_WIDTH;
 
   typedef enum logic [1:0] {
-    SEARCH,
-    INSERT,
-    DELETE
-  } ht_cmd_t;
+    OP_SEARCH,
+    OP_INSERT,
+    OP_DELETE
+  } ht_opcode_t;
 
   typedef enum int unsigned {
     SEARCH_FOUND,
@@ -23,7 +23,7 @@ package hash_table;
 
     DELETE_SUCCESS,
     DELETE_NOT_SUCCESS_NO_ENTRY
-  } ht_res_t;
+  } ht_rescode_t;
   
   typedef enum int unsigned {
     READ_NO_HEAD,
@@ -45,22 +45,27 @@ package hash_table;
   } ram_data_t; 
   
   typedef struct packed {
-    logic  [KEY_WIDTH-1:0]      key;
-    logic  [VALUE_WIDTH-1:0]    value;
-    ht_cmd_t                    cmd;
+    logic        [KEY_WIDTH-1:0]    key;
+    logic        [VALUE_WIDTH-1:0]  value;
+    ht_opcode_t                     opcode;
+  } ht_command_t;
+  
+  // pdata - data to pipeline/proccessing
+  typedef struct packed {
+    ht_command_t                cmd;
 
     logic  [BUCKET_WIDTH-1:0]   bucket;
 
     logic  [HEAD_PTR_WIDTH-1:0] head_ptr;
     logic                       head_ptr_val;
-  } ht_data_task_t;
+  } ht_pdata_t;
 
   typedef struct packed {
-    logic    [KEY_WIDTH-1:0]    key;
-    logic    [VALUE_WIDTH-1:0]  value;
+    ht_command_t                cmd;
+    ht_rescode_t                rescode;
 
-    ht_cmd_t                    cmd;
-    ht_res_t                    res;
+    // valid only for opcode = OP_SEARCH
+    logic [VALUE_WIDTH-1:0]     found_value;        
   } ht_result_t;
 
 endpackage

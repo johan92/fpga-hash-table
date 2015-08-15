@@ -11,7 +11,7 @@ module data_table_search_wrapper #(
   input                       clk_i,
   input                       rst_i,
   
-  input  ht_data_task_t       task_i,
+  input  ht_pdata_t           task_i,
   input                       task_valid_i,
   output                      task_ready_o,
 

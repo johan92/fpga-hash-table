@@ -46,7 +46,7 @@ module data_table_insert #(
   input                       clk_i,
   input                       rst_i,
   
-  input  ht_data_task_t       task_i,
+  input  ht_pdata_t           task_i,
   input                       task_valid_i,
   output                      task_ready_o,
   
@@ -93,7 +93,7 @@ enum int unsigned {
 
 logic                   no_empty_addr;
 
-ht_data_task_t          task_locked;
+ht_pdata_t              task_locked;
 logic                   key_match;
 logic                   got_tail;
 logic [A_WIDTH-1:0]     rd_addr;
@@ -194,7 +194,7 @@ always_ff @( posedge clk_i or posedge rst_i )
       task_locked <= task_i;
 
 assign no_empty_addr = !empty_addr_val_i;
-assign key_match = ( task_locked.key == rd_data_i.key );
+assign key_match = ( task_locked.cmd.key == rd_data_i.key );
 assign got_tail  = ( rd_data_i.next_ptr_val == 1'b0  );
 
 always_ff @( posedge clk_i or posedge rst_i )
@@ -227,15 +227,15 @@ always_comb
       KEY_MATCH_S:
         begin
           // just rewriting value
-          wr_data_o.value = task_locked.value;
+          wr_data_o.value = task_locked.cmd.value;
 
           wr_addr_o       = rd_addr;
         end
 
       NO_HEAD_PTR_WR_DATA_S, ON_TAIL_WR_DATA_S:
         begin
-          wr_data_o.key          = task_locked.key;
-          wr_data_o.value        = task_locked.value;
+          wr_data_o.key          = task_locked.cmd.key;
+          wr_data_o.value        = task_locked.cmd.value;
           wr_data_o.next_ptr     = '0;
           wr_data_o.next_ptr_val = 1'b0;
 
@@ -269,17 +269,13 @@ assign empty_addr_rd_ack_o            = state_first_tick && ( ( state == NO_HEAD
                                                               ( state == ON_TAIL_UPD_NEXT_PTR_S ) );
 always_comb
   begin
-    result_o.key   = task_locked.key;
-    result_o.value = task_locked.value;
-    result_o.cmd   = task_locked.cmd;
-  end
+    result_o.cmd         = task_locked.cmd;
+    result_o.found_value = '0;
 
-always_comb
-  begin
     case( state )
-      KEY_MATCH_S:     result_o.res = INSERT_SUCCESS_SAME_KEY;
-      NO_EMPTY_ADDR_S: result_o.res = INSERT_NOT_SUCCESS_TABLE_IS_FULL;
-      default:         result_o.res = INSERT_SUCCESS;
+      KEY_MATCH_S:     result_o.rescode = INSERT_SUCCESS_SAME_KEY;
+      NO_EMPTY_ADDR_S: result_o.rescode = INSERT_NOT_SUCCESS_TABLE_IS_FULL;
+      default:         result_o.rescode = INSERT_SUCCESS;
     endcase
   end
 
@@ -290,10 +286,7 @@ assign result_valid_o = ( state == KEY_MATCH_S            ) ||
 
 
 // synthesis translate_off
-
-function void print( string msg );
-  $display("%08t: %m: %s", $time, msg);
-endfunction
+`include "../tb/ht_dbg.vh"
 
 function void print_state_transition( );
   string msg;
@@ -305,61 +298,29 @@ function void print_state_transition( );
     end
 endfunction
 
-function void print_new_task( );
-  string msg;
+logic [A_WIDTH-1:0] rd_addr_latched;
 
-  if( task_valid_i && task_ready_o )
-    begin
-      $sformat( msg, "INSERT_TASK: key = 0x%x head_ptr = 0x%x head_ptr_val = 0x%x", 
-                                   task_i.key, task_i.head_ptr, task_i.head_ptr_val );
-      print( msg );
-    end
-endfunction
-
-function void print_rd_data( );
-  string msg;
-
-  if( rd_data_val )
-    begin
-      $sformat( msg, "RD_DATA: key = 0x%x value = 0x%x next_ptr = 0x%x, next_ptr_val = 0x%x",
-                               rd_data_i.key, rd_data_i.value, rd_data_i.next_ptr, rd_data_i.next_ptr_val );
-      print( msg );                             
-    end
-endfunction
-
-function void print_wr_data( );
-  string msg;
-
-  if( wr_en_o )
-    begin
-      $sformat( msg, "WR_DATA: addr = 0x%x key = 0x%x value = 0x%x next_ptr = 0x%x, next_ptr_val = 0x%x",
-                               wr_addr_o, wr_data_o.key, wr_data_o.value, wr_data_o.next_ptr, wr_data_o.next_ptr_val );
-      print( msg );                             
-    end
-endfunction
-
-function void print_res( );
-  string msg;
-
-  if( result_valid_o && result_ready_i )
-    begin
-      $sformat( msg, "INSERT_RES: key = 0x%x value = 0x%x cmd = %s res = %s", 
-                                  result_o.key, result_o.value, result_o.cmd, result_o.res );
-      print( msg );
-    end
-endfunction
-
-initial
+always_latch
   begin
-    forever
-      begin
-        @( posedge clk_i );
-        print_new_task( );
-        print_rd_data( );
-        print_wr_data( );
-        print_res( );
-        print_state_transition( );
-      end
+    if( rd_en_o )
+      rd_addr_latched <= rd_addr_o;
+  end
+
+always_ff @( posedge clk_i )
+  begin
+    if( task_valid_i && task_ready_o )
+      print_new_task( task_i );
+    
+    if( rd_data_val )
+      print_ram_data( "RD_DATA", rd_addr_latched, rd_data_i );
+
+    if( wr_en_o )
+      print_ram_data( "WR_DATA", wr_addr_o, wr_data_o );
+    
+    if( result_valid_o && result_ready_i )
+      print_result( "INSERT_RES", result_o );
+
+    print_state_transition( );
   end
 
 // synthesis translate_on

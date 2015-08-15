@@ -5,8 +5,13 @@ module head_table (
   input                        clk_i,
   input                        rst_i,
   
-  ht_if.slave                  ht_in,
-  ht_if.master                 ht_out,
+  input        ht_pdata_t      pdata_in_i,
+  input                        pdata_in_valid_i,
+  output                       pdata_in_ready_o,
+
+  output       ht_pdata_t      pdata_out_o,
+  output                       pdata_out_valid_o,
+  input                        pdata_out_ready_i,
   
   head_table_if.slave          head_table_if,
 
@@ -26,7 +31,7 @@ head_ram_data_t        wr_data;
 head_ram_data_t        rd_data;
 logic                  wr_en;
 
-assign rd_addr = ht_in.bucket;
+assign rd_addr = pdata_in_i.bucket;
 
 true_dual_port_ram_single_clock #( 
   .DATA_WIDTH                             ( D_WIDTH           ), 
@@ -78,40 +83,38 @@ assign wr_data.ptr_val  = ( clear_ram_flag ) ? ( 1'b0       ) : ( head_table_if.
 assign wr_en            = ( clear_ram_flag ) ? ( 1'b1       ) : ( head_table_if.wr_en           ); 
 assign clear_ram_done_o = clear_ram_flag && ( clear_addr == '1 );
 
-localparam TUSER_WIDTH = $bits( head_ram_data_t );
-
-ht_if ht_in_d1( 
-  .clk            ( clk_i          ) 
-);
-
-ht_if ht_w_head_ptr ( 
-  .clk            ( clk_i       ) 
-);
+ht_pdata_t pdata_in_d1;
+logic      pdata_in_d1_valid;
+logic      pdata_in_d1_ready;
 
 ht_delay #(
-  .DELAY                                  ( 1                 ),
-  .PIPELINE_READY                         ( 0                 )
+  .D_WIDTH                                ( $bits( pdata_in_d1 ) ),
+  .DELAY                                  ( 1                    ),
+  .PIPELINE_READY                         ( 0                    )
 ) ht_d1 (
-  .clk_i                                  ( clk_i             ),
-  .rst_i                                  ( rst_i             ),
+  .clk_i                                  ( clk_i                ),
+  .rst_i                                  ( rst_i                ),
 
-  .ht_in                                  ( ht_in             ),
-  .ht_out                                 ( ht_in_d1          )
+  .data_in_i                              ( pdata_in_i           ),
+  .data_in_valid_i                        ( pdata_in_valid_i     ),
+  .data_in_ready_o                        ( pdata_in_ready_o     ),
+
+  .data_out_o                             ( pdata_in_d1          ),
+  .data_out_valid_o                       ( pdata_in_d1_valid    ),
+  .data_out_ready_i                       ( pdata_in_d1_ready    )
 
 );
 
-assign ht_out.key          = ht_in_d1.key; 
-assign ht_out.value        = ht_in_d1.value;
-assign ht_out.cmd          = ht_in_d1.cmd;
+always_comb
+  begin
+    pdata_out_o              = pdata_in_d1;
 
-assign ht_out.bucket       = ht_in_d1.bucket;
+    pdata_out_o.head_ptr     = rd_data.ptr; 
+    pdata_out_o.head_ptr_val = rd_data.ptr_val;
+  end
 
-assign ht_out.head_ptr     = rd_data.ptr; 
-assign ht_out.head_ptr_val = rd_data.ptr_val;
-
-assign ht_out.valid        = ht_in_d1.valid;
-
-assign ht_in_d1.ready      = ht_out.ready;
+assign pdata_out_valid_o = pdata_in_d1_valid;
+assign pdata_in_d1_ready = pdata_out_ready_i;
 
 
 // synthesis translate_off

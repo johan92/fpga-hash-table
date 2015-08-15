@@ -6,7 +6,7 @@ interface ht_if(
 
 logic  [KEY_WIDTH-1:0]      key;
 logic  [VALUE_WIDTH-1:0]    value;
-ht_cmd_t                    cmd;
+ht_opcode_t                 opcode;
 
 logic  [BUCKET_WIDTH-1:0]   bucket;
 
@@ -19,7 +19,7 @@ logic                       ready;
 modport master(
   output key,
   output value,
-  output cmd,
+  output opcode,
   output bucket,
   output head_ptr,
   output head_ptr_val,
@@ -30,7 +30,7 @@ modport master(
 modport slave(
   input  key,
   input  value,
-  input  cmd,
+  input  opcode,
   input  bucket,
   input  head_ptr,
   input  head_ptr_val,

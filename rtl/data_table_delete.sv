@@ -48,7 +48,7 @@ module data_table_delete #(
   input                       clk_i,
   input                       rst_i,
   
-  input  ht_data_task_t       task_i,
+  input  ht_pdata_t           task_i,
   input                       task_valid_i,
   output                      task_ready_o,
   
@@ -91,7 +91,7 @@ enum int unsigned {
 
 } state, next_state, state_d1;
 
-ht_data_task_t          task_locked;
+ht_pdata_t              task_locked;
 logic                   key_match;
 logic                   got_tail;
 logic [A_WIDTH-1:0]     rd_addr;
@@ -193,7 +193,7 @@ always_ff @( posedge clk_i or posedge rst_i )
     if( task_ready_o && task_valid_i )
       task_locked <= task_i;
 
-assign key_match = ( task_locked.key == rd_data_i.key );
+assign key_match = ( task_locked.cmd.key == rd_data_i.key );
 assign got_tail  = ( rd_data_i.next_ptr_val == 1'b0  );
 
 always_ff @( posedge clk_i or posedge rst_i )
@@ -282,22 +282,18 @@ assign add_empty_ptr_o     = rd_addr;
 assign add_empty_ptr_en_o  = state_first_tick && ( state == CLEAR_RAM_AND_PTR_S );
 
 // ******* Result calculation *******
-assign result_o.key   = task_locked.key;
-assign result_o.value = task_locked.value;
-assign result_o.cmd   = task_locked.cmd;
-
-assign result_o.res = ( ( state == NO_VALID_HEAD_PTR_S     ) ||
-                        ( state == IN_TAIL_WITHOUT_MATCH_S ) ) ? ( DELETE_NOT_SUCCESS_NO_ENTRY ):
-                                                                 ( DELETE_SUCCESS              );
+assign result_o.cmd         = task_locked.cmd;
+assign result_o.found_value = '0;
+assign result_o.rescode     = ( ( state == NO_VALID_HEAD_PTR_S     ) ||
+                              ( state == IN_TAIL_WITHOUT_MATCH_S ) ) ? ( DELETE_NOT_SUCCESS_NO_ENTRY ):
+                                                                       ( DELETE_SUCCESS              );
 
 assign result_valid_o = ( state == CLEAR_RAM_AND_PTR_S      ) ||
                         ( state == NO_VALID_HEAD_PTR_S      ) ||
                         ( state == IN_TAIL_WITHOUT_MATCH_S  );
 
 // synthesis translate_off
-function void print( string msg );
-  $display("%08t: %m: %s", $time, msg);
-endfunction
+`include "../tb/ht_dbg.vh"
 
 function void print_state_transition( );
   string msg;
@@ -309,61 +305,29 @@ function void print_state_transition( );
     end
 endfunction
 
-function void print_new_task( );
-  string msg;
+logic [A_WIDTH-1:0] rd_addr_latched;
 
-  if( task_valid_i && task_ready_o )
-    begin
-      $sformat( msg, "DELETE_TASK: key = 0x%x head_ptr = 0x%x head_ptr_val = 0x%x", 
-                                   task_i.key, task_i.head_ptr, task_i.head_ptr_val );
-      print( msg );
-    end
-endfunction
-
-function void print_rd_data( );
-  string msg;
-
-  if( rd_data_val )
-    begin
-      $sformat( msg, "RD_DATA: key = 0x%x value = 0x%x next_ptr = 0x%x, next_ptr_val = 0x%x",
-                               rd_data_i.key, rd_data_i.value, rd_data_i.next_ptr, rd_data_i.next_ptr_val );
-      print( msg );                             
-    end
-endfunction
-
-function void print_wr_data( );
-  string msg;
-
-  if( wr_en_o )
-    begin
-      $sformat( msg, "WR_DATA: addr = 0x%x key = 0x%x value = 0x%x next_ptr = 0x%x, next_ptr_val = 0x%x",
-                               wr_addr_o, wr_data_o.key, wr_data_o.value, wr_data_o.next_ptr, wr_data_o.next_ptr_val );
-      print( msg );                             
-    end
-endfunction
-
-function void print_res( );
-  string msg;
-
-  if( result_valid_o && result_ready_i )
-    begin
-      $sformat( msg, "DELETE_RES: key = 0x%x value = 0x%x cmd = %s res = %s", 
-                                  result_o.key, result_o.value, result_o.cmd, result_o.res );
-      print( msg );
-    end
-endfunction
-
-initial
+always_latch
   begin
-    forever
-      begin
-        @( posedge clk_i );
-        print_new_task( );
-        print_rd_data( );
-        print_wr_data( );
-        print_res( );
-        print_state_transition( );
-      end
+    if( rd_en_o )
+      rd_addr_latched <= rd_addr_o;
+  end
+
+always_ff @( posedge clk_i )
+  begin
+    if( task_valid_i && task_ready_o )
+      print_new_task( task_i );
+    
+    if( rd_data_val )
+      print_ram_data( "RD_DATA", rd_addr_latched, rd_data_i );
+
+    if( wr_en_o )
+      print_ram_data( "WR_DATA", wr_addr_o, wr_data_o );
+    
+    if( result_valid_o && result_ready_i )
+      print_result( "DELETE_RES", result_o );
+
+    print_state_transition( );
   end
 
 // synthesis translate_on

@@ -35,13 +35,13 @@ initial
 ref_hash_table ref_ht;
 
 // FIXME - now we don't care about ready  
-task ht_task( input bit [KEY_WIDTH-1:0] _key, bit [VALUE_WIDTH-1:0] _value, ht_cmd_t _cmd );
+task ht_task( input bit [KEY_WIDTH-1:0] _key, bit [VALUE_WIDTH-1:0] _value, ht_opcode_t _opcode );
   //repeat( 20 ) @( posedge clk );
   //@( posedge clk );
 
-  ht_task_in.key   <= _key;
-  ht_task_in.value <= _value;
-  ht_task_in.cmd   <= _cmd;
+  ht_task_in.cmd.key     <= _key;
+  ht_task_in.cmd.value   <= _value;
+  ht_task_in.cmd.opcode  <= _opcode;
   ht_task_in.valid <= 1'b1;
   
   @( posedge clk );
@@ -60,7 +60,7 @@ task ht_task( input bit [KEY_WIDTH-1:0] _key, bit [VALUE_WIDTH-1:0] _value, ht_c
 
   ht_task_in.valid <= 1'b0;
   
-  ref_ht.do_task( _key, _value, _cmd ); 
+  //ref_ht.do_task( _key, _value, _cmd ); 
 endtask
 
 
@@ -82,10 +82,10 @@ initial
     //dut.data_table.write_to_data_ram( 7, 32'h02_00_00_00, 16'hABCD, 0, 1'b0 );
     
     @( posedge clk );
-    ht_task( 32'h01_00_00_00, 16'h1234, INSERT ); 
-    ht_task( 32'h01_00_00_01, 16'h1235, INSERT ); 
-    ht_task( 32'h01_00_00_01, 16'h1235, DELETE ); 
-    ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
+    ht_task( 32'h01_00_00_00, 16'h1234, OP_INSERT ); 
+    ht_task( 32'h01_00_00_01, 16'h1235, OP_INSERT ); 
+    ht_task( 32'h01_00_00_01, 16'h1235, OP_DELETE ); 
+    ht_task( 32'h01_00_00_00, 16'h0000, OP_SEARCH ); 
     //ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
     //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
     //ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
@@ -120,7 +120,7 @@ hash_table_top dut(
   .clk_i                                  ( clk               ),
   .rst_i                                  ( rst               ),
     
-  .ht_task_in                             ( ht_task_in        ),
+  .ht_cmd_in                              ( ht_task_in        ),
   .ht_res_out                             ( ht_res_out        )
 
 );

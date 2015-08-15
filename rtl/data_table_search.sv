@@ -7,7 +7,7 @@ module data_table_search #(
   input                 clk_i,
   input                 rst_i,
   
-  input  ht_data_task_t task_i,
+  input  ht_pdata_t     task_i,
   input                 task_valid_i,
   output                task_ready_o,
   
@@ -36,7 +36,7 @@ module data_table_search #(
         SEARCH_NOT_SUCCESS_NO_ENTRY
 */
 
-ht_data_task_t          task_locked;
+ht_pdata_t              task_locked;
 logic                   key_match;
 logic                   got_tail;
 logic [A_WIDTH-1:0]     rd_addr;
@@ -111,7 +111,7 @@ always_ff @( posedge clk_i or posedge rst_i )
     if( task_valid_i && task_ready_o )
       task_locked <= task_i;
 
-assign key_match = ( task_locked.key == rd_data_i.key );
+assign key_match = ( task_locked.cmd.key == rd_data_i.key );
 assign got_tail  = ( rd_data_i.next_ptr_val == 1'b0  );
 
 always_ff @( posedge clk_i or posedge rst_i )
@@ -134,11 +134,14 @@ always_ff @( posedge clk_i or posedge rst_i )
     if( rd_data_val_i && ( next_state == KEY_MATCH_S ) )
       found_value <= rd_data_i.value;
 
-assign result_o.key    = task_locked.key;
-assign result_o.value  = found_value;
-assign result_o.cmd    = task_locked.cmd; 
-assign result_o.res    = ( state == KEY_MATCH_S ) ? ( SEARCH_FOUND                ):
+always_comb
+  begin
+    result_o.cmd         = task_locked.cmd;
+    result_o.found_value = found_value;
+
+    result_o.rescode   = ( state == KEY_MATCH_S ) ? ( SEARCH_FOUND                ):
                                                     ( SEARCH_NOT_SUCCESS_NO_ENTRY );
+  end
 
 assign result_valid_o   = ( state == KEY_MATCH_S             ) ||
                           ( state == ON_TAIL_WITHOUT_MATCH_S ) ||
@@ -148,15 +151,7 @@ assign task_ready_o = ( state == IDLE_S );
 
 // synthesis translate_off
 
-// task_valid_i should be only in IDLE state
-assert property(
-  @( posedge clk_i ) disable iff ( rst_i )
-    ( task_valid_i |-> ( state == IDLE_S ) )
-);
-
-function void print( string msg );
-  $display("%08t: %m: %s", $time, msg);
-endfunction
+`include "../tb/ht_dbg.vh"
 
 function void print_state_transition( );
   string msg;
@@ -169,49 +164,26 @@ function void print_state_transition( );
 
 endfunction
 
-function void print_new_task( );
-  string msg;
+logic [A_WIDTH-1:0] rd_addr_latched;
 
-  if( task_valid_i && task_ready_o )
-    begin
-      $sformat( msg, "SEARCH_TASK: key = 0x%x head_ptr = 0x%x head_ptr_val = 0x%x", 
-                                   task_i.key, task_i.head_ptr, task_i.head_ptr_val );
-      print( msg );
-    end
-endfunction
-
-function void print_rd_data( );
-  string msg;
-
-  if( rd_data_val_i )
-    begin
-      $sformat( msg, "RD_DATA: key = 0x%x value = 0x%x next_ptr = 0x%x, next_ptr_val = 0x%x",
-                               rd_data_i.key, rd_data_i.value, rd_data_i.next_ptr, rd_data_i.next_ptr_val );
-      print( msg );                             
-    end
-endfunction
-
-function void print_res( );
-  string msg;
-
-  if( result_valid_o && result_ready_i )
-    begin
-      $sformat( msg, "SEARCH_RES: key = 0x%x value = 0x%x cmd = %s res = %s", 
-                                  result_o.key, result_o.value, result_o.cmd, result_o.res );
-      print( msg );
-    end
-endfunction
-
-initial
+always_latch
   begin
-    forever
-      begin
-        @( posedge clk_i );
-        print_new_task( );
-        print_rd_data( );
-        print_res( );
-        print_state_transition( );
-      end
+    if( rd_en_o )
+      rd_addr_latched <= rd_addr_o;
+  end
+
+always_ff @( posedge clk_i )
+  begin
+    if( task_valid_i && task_ready_o )
+      print_new_task( task_i );
+    
+    if( rd_data_val_i )
+      print_ram_data( "RD_DATA", rd_addr_latched, rd_data_i );
+
+    if( result_valid_o && result_ready_i )
+      print_result( "SEARCH_RES", result_o );
+
+    print_state_transition( );
   end
 
 // synthesis translate_on
