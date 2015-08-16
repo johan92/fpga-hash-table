@@ -1,6 +1,6 @@
 import hash_table::*;
 
-interface ht_task_if( 
+interface ht_cmd_if( 
   input clk 
 );
 

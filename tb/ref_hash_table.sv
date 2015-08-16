@@ -16,73 +16,67 @@ class ref_hash_table;
     this.max_keys_cnt  = _max_keys_cnt;
   endfunction
  
-  /*
-  function ht_result_t do_task( input bit [KEY_WIDTH-1:0]   key, 
-                                      bit [VALUE_WIDTH-1:0] value,
-                                      ht_cmd_t              cmd );
+  function ht_result_t do_command( input ht_command_t cmd ); 
     
-    ht_result_t task_res;
-
-    task_res.key    = key;
-    task_res.value  = value;
-    task_res.cmd    = cmd;
+    ht_result_t res;
+    
+    res.cmd = cmd;
                               
-    case( cmd )
-      SEARCH:
+    case( cmd.opcode )
+      OP_SEARCH:
         begin
-          if( ass_arr.exists( key ) )
+          if( ass_arr.exists( cmd.key ) )
             begin
-              task_res.res   = SEARCH_FOUND;
-              task_res.value = ass_arr[ key ];
+              res.rescode     = SEARCH_FOUND;
+              res.found_value = ass_arr[ cmd.key ];
             end
           else
             begin
-              task_res.res = SEARCH_NOT_SUCCESS_NO_ENTRY;
+              res.rescode = SEARCH_NOT_SUCCESS_NO_ENTRY;
             end
         end
 
-      INSERT:
+      OP_INSERT:
         begin
-          if( ass_arr.exists( key ) )
+          if( ass_arr.exists( cmd.key ) )
             begin
-              task_res.res = INSERT_SUCCESS_SAME_KEY;
-              ass_arr[ key ] = value;
+              res.rescode = INSERT_SUCCESS_SAME_KEY;
+              ass_arr[ cmd.key ] = cmd.value;
             end
           else
             if( ass_arr.size() >= this.max_keys_cnt )
               begin
-                task_res.res = INSERT_NOT_SUCCESS_TABLE_IS_FULL;
+                res.rescode = INSERT_NOT_SUCCESS_TABLE_IS_FULL;
               end
             else
               begin
-                task_res.res = INSERT_SUCCESS;
-                ass_arr[ key ] = value;
+                res.rescode = INSERT_SUCCESS;
+                ass_arr[ cmd.key ] = cmd.value;
               end
         end
 
-      DELETE:
+      OP_DELETE:
         begin
-          if( ass_arr.exists( key ) )
+          if( ass_arr.exists( cmd.key ) )
             begin
-              task_res.res = DELETE_SUCCESS;
-              ass_arr.delete( key );
+              res.rescode = DELETE_SUCCESS;
+              ass_arr.delete( cmd.key );
             end
           else
             begin
-              task_res.res = DELETE_NOT_SUCCESS_NO_ENTRY;
+              res.rescode = DELETE_NOT_SUCCESS_NO_ENTRY;
             end
         end
 
       default:
         begin
-          $display("Unknown cmd = %s", cmd );
+          $display("Unknown cmd.opcode = %s", cmd.opcode );
           $fatal;
         end
     endcase
 
-    return task_res;
+    return res;
   endfunction                          
-  */
 
 endclass
 

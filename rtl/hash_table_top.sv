@@ -5,7 +5,7 @@ module hash_table_top(
   input                    clk_i,
   input                    rst_i,
   
-  ht_task_if.slave         ht_cmd_in,
+  ht_cmd_if.slave          ht_cmd_in,
   ht_res_if.master         ht_res_out
 
 );
