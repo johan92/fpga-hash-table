@@ -107,6 +107,17 @@ true_dual_port_ram_single_clock #(
   .q_b                                    (                   )
 );
 
+// using last data like cache 
+logic [A_WIDTH-1:0] last_wr_addr; 
+head_ram_data_t     last_wr_data; 
+
+always_ff @( posedge clk_i )
+  if( wr_en )
+    begin
+      last_wr_addr <= wr_addr;
+      last_wr_data <= wr_data;
+    end
+
 // clear RAM stuff
 logic               clear_ram_flag;
 logic [A_WIDTH-1:0] clear_addr;
@@ -164,9 +175,18 @@ ht_delay #(
 always_comb
   begin
     pdata_out_o              = pdata_in_d1;
-
-    pdata_out_o.head_ptr     = rd_data.ptr; 
-    pdata_out_o.head_ptr_val = rd_data.ptr_val;
+    
+    // this is one more workaround for backpressuring 
+    if( last_wr_addr == pdata_in_d1.bucket )
+      begin
+        pdata_out_o.head_ptr     = last_wr_data.ptr; 
+        pdata_out_o.head_ptr_val = last_wr_data.ptr_val;
+      end
+    else
+      begin
+        pdata_out_o.head_ptr     = rd_data.ptr; 
+        pdata_out_o.head_ptr_val = rd_data.ptr_val;
+      end
   end
 
 assign pdata_out_valid_o = pdata_in_d1_valid;

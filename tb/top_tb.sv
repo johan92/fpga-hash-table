@@ -80,12 +80,37 @@ task test_01( );
     end
 endtask
 
+task test_02( );
+  ht_command_t cmds[$];
+  
+  `CMD_INSERT_RAND( 32'h00_00_00_00 )
+  `CMD_INSERT_RAND( 32'h01_00_00_00 )
+  `CMD_INSERT_RAND( 32'h02_00_00_00 )
+  `CMD_INSERT_RAND( 32'h03_00_00_00 )
+
+  `CMD_SEARCH( 32'h03_00_00_00 )
+  `CMD_SEARCH( 32'h02_00_00_00 )
+  `CMD_SEARCH( 32'h01_00_00_00 )
+  `CMD_SEARCH( 32'h00_00_00_00 )
+  
+  `CMD_DELETE( 32'h00_00_00_00 )
+  `CMD_DELETE( 32'h01_00_00_00 )
+  `CMD_DELETE( 32'h02_00_00_00 )
+  `CMD_DELETE( 32'h03_00_00_00 )
+
+  foreach( cmds[i] )
+    begin
+      send_to_dut_c( cmds[i] );
+    end
+endtask
+
 
 initial
   begin
     wait( rst_done )
     @( posedge clk );
     test_01( );
+    test_02( );
   end
 
 

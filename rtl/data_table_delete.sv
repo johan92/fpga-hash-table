@@ -99,6 +99,7 @@ ram_data_t              prev_rd_data;
 logic [A_WIDTH-1:0]     prev_rd_addr;
 
 logic                   rd_data_val;
+logic                   rd_data_val_d1;
 logic                   state_first_tick;
 
 rd_data_val_helper #( 
@@ -208,6 +209,12 @@ always_ff @( posedge clk_i or posedge rst_i )
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
+    rd_data_val_d1 <= 1'b0;
+  else
+    rd_data_val_d1 <= rd_data_val;
+
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
     prev_rd_data <= '0;
   else
     if( rd_data_val )
@@ -222,8 +229,8 @@ always_ff @( posedge clk_i or posedge rst_i )
 
 assign task_ready_o = ( state == IDLE_S );
 
-assign rd_en_o      = state_first_tick && ( ( state == READ_HEAD_S   ) || 
-                                            ( state == GO_ON_CHAIN_S ) );   
+assign rd_en_o      = ( state_first_tick || rd_data_val_d1 ) && ( ( state == READ_HEAD_S   ) || 
+                                                                  ( state == GO_ON_CHAIN_S ) );   
 
 assign rd_addr_o    = rd_addr; 
 

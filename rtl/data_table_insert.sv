@@ -99,6 +99,7 @@ logic                   got_tail;
 logic [A_WIDTH-1:0]     rd_addr;
 
 logic                   rd_data_val;
+logic                   rd_data_val_d1;
 logic                   state_first_tick;
 
 rd_data_val_helper #( 
@@ -207,10 +208,17 @@ always_ff @( posedge clk_i or posedge rst_i )
       if( rd_data_val && ( next_state == GO_ON_CHAIN_S ) )
         rd_addr <= rd_data_i.next_ptr;
 
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    rd_data_val_d1 <= 1'b0;
+  else
+    rd_data_val_d1 <= rd_data_val;
+
+
 assign task_ready_o = ( state == IDLE_S );
 
-assign rd_en_o      = state_first_tick && ( ( state == READ_HEAD_S   ) || 
-                                            ( state == GO_ON_CHAIN_S ) );   
+assign rd_en_o      = ( state_first_tick || rd_data_val_d1 ) && ( ( state == READ_HEAD_S   ) || 
+                                                                  ( state == GO_ON_CHAIN_S ) );   
 assign rd_addr_o    = rd_addr; 
 
 assign wr_en_o      = state_first_tick && ( ( state == KEY_MATCH_S            ) ||
