@@ -4,9 +4,11 @@
 module true_dual_port_ram_single_clock
 #(parameter DATA_WIDTH=8, parameter ADDR_WIDTH=6, parameter REGISTER_OUT = 1)
 (
+        input clk,       
 	input [(DATA_WIDTH-1):0] data_a, data_b,
 	input [(ADDR_WIDTH-1):0] addr_a, addr_b,
-	input we_a, we_b, clk,
+	input we_a, we_b, 
+	input re_a, re_b,
 	output reg [(DATA_WIDTH-1):0] q_a, q_b
 );
 
@@ -29,11 +31,13 @@ module true_dual_port_ram_single_clock
 		if (we_a) 
 		begin
 			ram[addr_a] <= data_a;
-			pre_q_a <= data_a;
+			if( re_a )
+			  pre_q_a <= data_a;
 		end
 		else 
 		begin
-			pre_q_a <= ram[addr_a];
+		        if( re_a )
+			  pre_q_a <= ram[addr_a];
 		end 
 	end 
 
@@ -43,11 +47,13 @@ module true_dual_port_ram_single_clock
 		if (we_b) 
 		begin
 			ram[addr_b] <= data_b;
-			pre_q_b <= data_b;
+			if( re_b )
+			  pre_q_b <= data_b;
 		end
 		else 
 		begin
-			pre_q_b <= ram[addr_b];
+		        if( re_b )
+			  pre_q_b <= ram[addr_b];
 		end 
 	end
 

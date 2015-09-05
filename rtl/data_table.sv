@@ -341,11 +341,13 @@ true_dual_port_ram_single_clock #(
   .addr_a                                 ( ram_rd_addr       ),
   .data_a                                 ( {D_WIDTH{1'b0}}   ),
   .we_a                                   ( 1'b0              ),
+  .re_a                                   ( 1'b1              ),
   .q_a                                    ( ram_rd_data       ),
 
   .addr_b                                 ( ram_wr_addr       ),
   .data_b                                 ( ram_wr_data       ),
   .we_b                                   ( ram_wr_en         ),
+  .re_b                                   ( 1'b0              ),
   .q_b                                    (                   )
 );
 

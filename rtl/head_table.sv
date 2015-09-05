@@ -7,7 +7,7 @@ module head_table (
   
   input        ht_pdata_t      pdata_in_i,
   input                        pdata_in_valid_i,
-  output                       pdata_in_ready_o,
+  output logic                 pdata_in_ready_o,
 
   output       ht_pdata_t      pdata_out_o,
   output                       pdata_out_valid_o,
@@ -26,12 +26,66 @@ localparam A_WIDTH = BUCKET_WIDTH;
 
 logic [A_WIDTH-1:0]    wr_addr;
 logic [A_WIDTH-1:0]    rd_addr;
+logic                  rd_en;
 
 head_ram_data_t        wr_data;
 head_ram_data_t        rd_data;
 logic                  wr_en;
 
+ht_pdata_t             prev_pdata;
+logic                  prev_pdata_en;
+
+// bp - backpressure
+logic                  bp_pdata_in_valid;
+logic                  bp_pdata_in_ready;
+
+logic                  need_backpressure;
+
+
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    prev_pdata <= '0;
+  else
+    if( pdata_in_valid_i && pdata_in_ready_o )
+      prev_pdata <= pdata_in_i;
+
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    prev_pdata_en <= 1'b0;
+  else
+    if( pdata_in_valid_i && pdata_in_ready_o )
+      prev_pdata_en <= 1'b1;
+    else
+      prev_pdata_en <= 1'b0;
+
+assign need_backpressure = ( prev_pdata.bucket == pdata_in_i.bucket ) &&
+                           ( 
+                             ( prev_pdata.cmd.opcode == OP_INSERT ) ||
+                             ( prev_pdata.cmd.opcode == OP_DELETE )
+                           );
+always_comb
+  begin
+    bp_pdata_in_valid = pdata_in_valid_i;
+    pdata_in_ready_o  = bp_pdata_in_ready;
+
+    if( need_backpressure )
+      begin
+        if( prev_pdata_en )
+          begin
+            bp_pdata_in_valid = 1'b0;
+            pdata_in_ready_o  = 1'b0; 
+          end
+        else
+          begin
+            // waiting for input ready 
+            bp_pdata_in_valid &= pdata_out_ready_i; 
+            pdata_in_ready_o  &= pdata_out_ready_i;
+          end
+      end
+  end
+
 assign rd_addr = pdata_in_i.bucket;
+assign rd_en   = bp_pdata_in_valid && pdata_in_ready_o;
 
 true_dual_port_ram_single_clock #( 
   .DATA_WIDTH                             ( D_WIDTH           ), 
@@ -42,12 +96,14 @@ true_dual_port_ram_single_clock #(
 
   .addr_a                                 ( rd_addr           ),
   .data_a                                 ( {D_WIDTH{1'b0}}   ),
+  .re_a                                   ( rd_en             ), 
   .we_a                                   ( 1'b0              ),
   .q_a                                    ( rd_data           ),
 
   .addr_b                                 ( wr_addr           ),
   .data_b                                 ( wr_data           ),
   .we_b                                   ( wr_en             ),
+  .re_b                                   ( 1'b0              ),
   .q_b                                    (                   )
 );
 
@@ -96,8 +152,8 @@ ht_delay #(
   .rst_i                                  ( rst_i                ),
 
   .data_in_i                              ( pdata_in_i           ),
-  .data_in_valid_i                        ( pdata_in_valid_i     ),
-  .data_in_ready_o                        ( pdata_in_ready_o     ),
+  .data_in_valid_i                        ( bp_pdata_in_valid    ),
+  .data_in_ready_o                        ( bp_pdata_in_ready    ),
 
   .data_out_o                             ( pdata_in_d1          ),
   .data_out_valid_o                       ( pdata_in_d1_valid    ),
