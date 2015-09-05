@@ -218,9 +218,16 @@ assign wr_en_o      = state_first_tick && ( ( state == KEY_MATCH_S            ) 
                                             ( state == ON_TAIL_WR_DATA_S      ) ||
                                             ( state == ON_TAIL_UPD_NEXT_PTR_S ) ); 
 
+ram_data_t rd_data_locked;
+
+always_ff @( posedge clk_i )
+  if( rd_data_val )
+    rd_data_locked <= rd_data_i;
+
+
 always_comb
   begin
-    wr_data_o = rd_data_i;
+    wr_data_o = rd_data_locked;
     wr_addr_o = 'x;
 
     case( state )
@@ -253,7 +260,7 @@ always_comb
       default:
         begin
           // do nothing
-          wr_data_o = rd_data_i;
+          wr_data_o = rd_data_locked;
           wr_addr_o = 'x;
         end
     endcase

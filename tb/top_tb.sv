@@ -33,6 +33,11 @@ initial
     rst_done <= 1'b1;
   end
 
+task send_to_dut_c( input ht_command_t c );
+  // using hierarchial access to put command in mailbox
+  env.drv.gen2drv.put( c );
+endtask
+
 task send_to_dut( input bit [KEY_WIDTH-1:0] _key, bit [VALUE_WIDTH-1:0] _value, ht_opcode_t _opcode );
   ht_command_t cmd;
   cmd.key    = _key;
@@ -43,40 +48,44 @@ task send_to_dut( input bit [KEY_WIDTH-1:0] _key, bit [VALUE_WIDTH-1:0] _value, 
   env.drv.gen2drv.put( cmd );
 endtask 
 
+`define CMD( _OP, _KEY, _VALUE ) cmds.push_back( '{ opcode : _OP, key : _KEY, value : _VALUE } ); 
+
+`define CMD_SEARCH( _KEY )         `CMD( OP_SEARCH, _KEY, 0 )
+
+`define CMD_INSERT( _KEY, _VALUE ) `CMD( OP_INSERT, _KEY, _VALUE )
+
+`define CMD_INSERT_RAND( _KEY )    `CMD_INSERT( _KEY, $urandom() )
+
+`define CMD_DELETE( _KEY )         `CMD( OP_DELETE, _KEY, 0 )
+
+task test_01( );
+  ht_command_t cmds[$];
+  
+  `CMD_INSERT( 32'h01_00_00_00, 16'h1234 )
+  `CMD_INSERT( 32'h01_00_10_00, 16'h1235 )
+
+  `CMD_INSERT_RAND( 32'h01_00_00_00 )
+  `CMD_INSERT_RAND( 32'h01_00_00_01 )
+  `CMD_DELETE     ( 32'h01_00_00_00 )
+  `CMD_INSERT_RAND( 32'h01_00_00_02 )
+
+  `CMD_SEARCH( 32'h01_00_00_00 )
+  `CMD_SEARCH( 32'h01_00_00_01 )
+  `CMD_SEARCH( 32'h01_00_00_01 )
+  `CMD_SEARCH( 32'h01_00_00_03 )
+
+  foreach( cmds[i] )
+    begin
+      send_to_dut_c( cmds[i] );
+    end
+endtask
+
+
 initial
   begin
     wait( rst_done )
     @( posedge clk );
-    send_to_dut( 32'h01_00_00_00, 16'h1234, OP_INSERT ); 
-    send_to_dut( 32'h01_00_00_01, 16'h1235, OP_INSERT ); 
-    send_to_dut( 32'h01_00_00_01, 16'h1235, OP_DELETE ); 
-    send_to_dut( 32'h01_00_00_00, 16'h0000, OP_SEARCH ); 
-    send_to_dut( 32'h02_00_00_00, 16'h0000, OP_SEARCH ); 
-    send_to_dut( 32'h01_00_00_00, 16'h0000, OP_SEARCH ); 
-    send_to_dut( 32'h02_00_00_00, 16'h0000, OP_SEARCH ); 
-    ////ht_task( 32'h01_00_00_01, 16'h0000, SEARCH ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h01_00_00_00, 16'h0000, SEARCH ); 
-    //ht_task( 32'h02_00_00_00, 16'h0000, SEARCH ); 
-
-    //
-    //ht_task( 32'h02_00_00_00, 16'hAABB, SEARCH ); 
-
-    //ht_task( 32'h11_22_33_44, 16'h0000, SEARCH ); 
-
+    test_01( );
   end
 
 
