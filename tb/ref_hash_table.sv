@@ -1,3 +1,9 @@
+/*
+  Class for "reference" hash table implementation.
+  Commands executes via "do_command" function, 
+  it returns ht_result_t - it should be the same like RTL result.
+*/
+
 `ifndef _REF_HASH_TABLE_
 `define _REF_HASH_TABLE_
 

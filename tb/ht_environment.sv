@@ -1,3 +1,12 @@
+/*
+  Environment that just creates driver, monitor and scoreboard,
+  and connect all stuff :) 
+
+*/
+
+`ifndef _HT_ENVIRONMENT_
+`define _HT_ENVIRONMENT_
+
 class ht_environment;
   
   ht_driver     drv;
@@ -23,4 +32,7 @@ class ht_environment;
       scb.run( );
     join
   endtask
+
 endclass
+
+`endif

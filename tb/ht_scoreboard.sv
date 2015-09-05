@@ -1,3 +1,13 @@
+/*
+  Little scoreboard for hashtable:
+    it get commands and dut results, and execute this command on 
+    hash table reference model. if result is not the same - error
+    will be displayed.
+*/
+
+`ifndef _HT_SCOREBOARD_
+`define _HT_SCOREBOARD_
+
 class ht_scoreboard;
   
   mailbox #( ht_command_t ) drv2scb; 
@@ -20,7 +30,7 @@ class ht_scoreboard;
     forever
       begin
         mon2scb.get( from_dut );
-        drv2scb.get( to_dut );
+        drv2scb.get( to_dut   ); 
 
         check( to_dut, from_dut );
       end
@@ -43,9 +53,10 @@ class ht_scoreboard;
           if( ( ref_res.rescode     != r.rescode     ) || 
               ( ref_res.found_value != r.found_value ) )
             begin
-              $error("Did not in %s: REF: %s found = 0x%x, DUT: %s found = 0x%x", c.opcode, ref_res.rescode, ref_res.found_value, r.rescode, r.found_value );
+              $error("Did not in %s: key = 0x%x REF: %s found = 0x%x, DUT: %s found = 0x%x", c.opcode, c.key, ref_res.rescode, ref_res.found_value, r.rescode, r.found_value );
             end
         end
+
       OP_INSERT, OP_DELETE:
         begin
           if( ref_res.rescode != r.rescode )
@@ -58,3 +69,5 @@ class ht_scoreboard;
   endfunction
 
 endclass
+
+`endif
