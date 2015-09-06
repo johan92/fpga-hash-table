@@ -104,6 +104,67 @@ task test_02( );
     end
 endtask
 
+task test_03( );
+  ht_command_t cmds[$];
+  
+  `CMD_SEARCH      ( 32'h04_00_00_00 )
+  `CMD_DELETE      ( 32'h04_11_11_11 )
+
+  `CMD_INSERT_RAND ( 32'h04_00_00_00 )
+  `CMD_SEARCH      ( 32'h04_10_00_00 )
+  `CMD_SEARCH      ( 32'h04_00_00_00 )
+  `CMD_DELETE      ( 32'h04_10_00_00 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_01 )
+  `CMD_SEARCH      ( 32'h04_10_00_01 )
+  `CMD_SEARCH      ( 32'h04_00_00_01 )
+  `CMD_DELETE      ( 32'h04_10_00_01 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_02 )
+  `CMD_SEARCH      ( 32'h04_10_00_02 )
+  `CMD_SEARCH      ( 32'h04_00_00_02 )
+  `CMD_DELETE      ( 32'h04_10_00_02 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_03 )
+  `CMD_SEARCH      ( 32'h04_10_00_03 )
+  `CMD_SEARCH      ( 32'h04_00_00_03 )
+  `CMD_DELETE      ( 32'h04_10_00_03 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_04 )
+  `CMD_SEARCH      ( 32'h04_10_00_04 )
+  `CMD_SEARCH      ( 32'h04_00_00_04 )
+  `CMD_DELETE      ( 32'h04_10_00_04 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_05 )
+  `CMD_SEARCH      ( 32'h04_10_00_05 )
+  `CMD_SEARCH      ( 32'h04_00_00_05 )
+  `CMD_DELETE      ( 32'h04_10_00_05 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_00 )
+  `CMD_DELETE      ( 32'h04_00_00_00 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_01 )
+  `CMD_DELETE      ( 32'h04_00_00_01 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_02 )
+  `CMD_DELETE      ( 32'h04_00_00_02 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_03 )
+  `CMD_DELETE      ( 32'h04_00_00_03 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_04 )
+  `CMD_DELETE      ( 32'h04_00_00_04 )
+  
+  `CMD_INSERT_RAND ( 32'h04_00_00_05 )
+  `CMD_DELETE      ( 32'h04_00_00_05 )
+
+  foreach( cmds[i] )
+    begin
+      send_to_dut_c( cmds[i] );
+    end
+
+endtask
+
 
 initial
   begin
@@ -111,6 +172,7 @@ initial
     @( posedge clk );
     test_01( );
     test_02( );
+    test_03( );
   end
 
 

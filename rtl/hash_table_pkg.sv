@@ -63,6 +63,8 @@ package hash_table;
   typedef struct packed {
     ht_command_t                cmd;
     ht_rescode_t                rescode;
+    
+    logic  [BUCKET_WIDTH-1:0]   bucket;
 
     // valid only for opcode = OP_SEARCH
     logic [VALUE_WIDTH-1:0]     found_value;        

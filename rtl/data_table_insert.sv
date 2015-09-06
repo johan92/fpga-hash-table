@@ -285,6 +285,7 @@ assign empty_addr_rd_ack_o            = state_first_tick && ( ( state == NO_HEAD
 always_comb
   begin
     result_o.cmd         = task_locked.cmd;
+    result_o.bucket      = task_locked.bucket;
     result_o.found_value = '0;
 
     case( state )

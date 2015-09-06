@@ -137,6 +137,8 @@ always_ff @( posedge clk_i or posedge rst_i )
 always_comb
   begin
     result_o.cmd         = task_locked.cmd;
+    result_o.bucket      = task_locked.bucket;
+
     result_o.found_value = found_value;
 
     result_o.rescode   = ( state == KEY_MATCH_S ) ? ( SEARCH_FOUND                ):

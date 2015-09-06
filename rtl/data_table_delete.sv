@@ -290,10 +290,11 @@ assign add_empty_ptr_en_o  = state_first_tick && ( state == CLEAR_RAM_AND_PTR_S 
 
 // ******* Result calculation *******
 assign result_o.cmd         = task_locked.cmd;
+assign result_o.bucket      = task_locked.bucket;
 assign result_o.found_value = '0;
 assign result_o.rescode     = ( ( state == NO_VALID_HEAD_PTR_S     ) ||
-                              ( state == IN_TAIL_WITHOUT_MATCH_S ) ) ? ( DELETE_NOT_SUCCESS_NO_ENTRY ):
-                                                                       ( DELETE_SUCCESS              );
+                                ( state == IN_TAIL_WITHOUT_MATCH_S ) ) ? ( DELETE_NOT_SUCCESS_NO_ENTRY ):
+                                                                         ( DELETE_SUCCESS              );
 
 assign result_valid_o = ( state == CLEAR_RAM_AND_PTR_S      ) ||
                         ( state == NO_VALID_HEAD_PTR_S      ) ||

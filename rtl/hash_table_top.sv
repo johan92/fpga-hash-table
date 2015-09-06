@@ -96,4 +96,17 @@ data_table data_table (
 
 );
 
+// synthesis translate_off
+
+ht_res_monitor resm(
+  .clk_i                                  ( clk_i              ),
+
+  .result_i                               ( ht_res_out.result  ),
+  .result_valid_i                         ( ht_res_out.valid   ),
+  .result_ready_i                         ( ht_res_out.ready   )
+
+);
+
+// synthesis translate_on
+
 endmodule
