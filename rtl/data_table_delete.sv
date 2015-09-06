@@ -238,6 +238,12 @@ assign wr_en_o      = state_first_tick && ( ( state == KEY_MATCH_IN_MIDDLE_S  ) 
                                             ( state == KEY_MATCH_IN_TAIL_S    ) || 
                                             ( state == CLEAR_RAM_AND_PTR_S    ) );
 
+ram_data_t rd_data_locked;
+
+always_ff @( posedge clk_i )
+  if( rd_data_val )
+    rd_data_locked <= rd_data_i;
+
 always_comb
   begin
     wr_data_o = prev_rd_data;
@@ -254,8 +260,8 @@ always_comb
 
       KEY_MATCH_IN_MIDDLE_S:
         begin
-          wr_data_o.next_ptr     = rd_data_i.next_ptr;
-          wr_data_o.next_ptr_val = rd_data_i.next_ptr_val;
+          wr_data_o.next_ptr     = rd_data_locked.next_ptr;
+          wr_data_o.next_ptr_val = rd_data_locked.next_ptr_val;
 
           wr_addr_o              = prev_rd_addr;
         end
@@ -279,8 +285,8 @@ always_comb
 
 // ******* Head Ptr table magic *******
 assign head_table_if.wr_addr          = task_locked.bucket; 
-assign head_table_if.wr_data_ptr      = rd_data_i.next_ptr;
-assign head_table_if.wr_data_ptr_val  = rd_data_i.next_ptr_val;
+assign head_table_if.wr_data_ptr      = rd_data_locked.next_ptr;
+assign head_table_if.wr_data_ptr_val  = rd_data_locked.next_ptr_val;
 assign head_table_if.wr_en            = state_first_tick && ( state == KEY_MATCH_IN_HEAD_S );
 
 // ******* Empty ptr storage ******
