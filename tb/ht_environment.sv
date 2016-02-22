@@ -33,6 +33,17 @@ class ht_environment;
     join
   endtask
 
+  // return 1 if all mailboxs is empty
+  // otherwize 0
+  function bit mailboxs_is_empty( );
+    bit rez;
+
+    rez = ( drv2scb.num() == 0 ) && 
+          ( mon2scb.num() == 0 );
+
+    return rez;
+  endfunction
+
 endclass
 
 `endif
