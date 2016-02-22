@@ -83,7 +83,43 @@ class ref_hash_table;
 
     return res;
   endfunction                          
+  
+  function automatic int get_key_that_exists( output key_t key_o );
+    key_t keys[$];
+    
+    key_t i;
+    int r;
+    
+    if( ass_arr.size() == 0 )
+      begin
+        // no 
+        return -1;
+      end
 
+    // getting all keys in ass_arr
+    ass_arr.first( i );
+    keys.push_back( i );
+
+    while( ass_arr.next( i ) )
+      begin
+        keys.push_back( i );
+      end
+    
+    keys.shuffle( );
+    
+    // selecting random key from list
+    r = $urandom_range( keys.size(), 0 );
+
+    key_o = keys[r];
+
+    // selfchecking assertion
+    if( ass_arr.exists( key_o ) == 0 )
+      begin
+        $error("key_o = 0x%x", key_o );
+      end
+
+    return 0;
+  endfunction 
 endclass
 
 `endif 

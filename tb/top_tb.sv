@@ -38,7 +38,8 @@ task send_to_dut_c( input ht_command_t c );
   env.drv.gen2drv.put( c );
 endtask
 
-function bit [KEY_WIDTH-1:0] gen_rand_key( int max_bucket_num = ( 2**BUCKET_WIDTH - 1 ), 
+function bit [KEY_WIDTH-1:0] gen_rand_key( int min_bucket_num  = 0,
+                                           int max_bucket_num = ( 2**BUCKET_WIDTH - 1 ), 
                                            int max_key_value  = ( 2**( KEY_WIDTH - BUCKET_WIDTH ) - 1 ) );
   bit [BUCKET_WIDTH-1:0] bucket_num;
   bit [KEY_WIDTH-1:0]    gen_key;
@@ -49,8 +50,8 @@ function bit [KEY_WIDTH-1:0] gen_rand_key( int max_bucket_num = ( 2**BUCKET_WIDT
       $fatal();
     end
 
-  bucket_num = $urandom_range( max_bucket_num , 0 );
-  gen_key    = $urandom_range( max_key_value, 0 );
+  bucket_num = $urandom_range( max_bucket_num, min_bucket_num );
+  gen_key    = $urandom_range( max_key_value,  0              );
   
   // replace high bits by bucket_num (is needs in dummy hash)
   gen_key[ KEY_WIDTH - 1 : KEY_WIDTH - BUCKET_WIDTH ] = bucket_num;
@@ -200,6 +201,7 @@ task test_04( );
     end
 endtask 
 
+// testing small amount of buckets with random commands
 task test_05( );
   ht_command_t cmds[$];
   
@@ -207,9 +209,9 @@ task test_05( );
   
   for( int c = 0; c < 5000; c++ )
     begin
-      `CMD_SEARCH      ( gen_rand_key( 15, 7 ) )
-      `CMD_INSERT_RAND ( gen_rand_key( 15, 7 ) )
-      `CMD_DELETE      ( gen_rand_key( 15, 7 ) )
+      `CMD_SEARCH      ( gen_rand_key( 0, 15, 7 ) )
+      `CMD_INSERT_RAND ( gen_rand_key( 0, 15, 7 ) )
+      `CMD_DELETE      ( gen_rand_key( 0, 15, 7 ) )
     end
   
   cmds.shuffle( );
@@ -221,6 +223,7 @@ task test_05( );
 
 endtask
 
+// testing only one bucket with random commands
 task test_06( );
   ht_command_t cmds[$];
   
@@ -228,11 +231,59 @@ task test_06( );
 
   for( int c = 0; c < 1000; c++ )
     begin
-      `CMD_SEARCH     ( gen_rand_key( 0, 7 ) )
-      `CMD_INSERT_RAND( gen_rand_key( 0, 7 ) )
-      `CMD_DELETE     ( gen_rand_key( 0, 7 ) )
+      `CMD_SEARCH     ( gen_rand_key( 0, 0, 7 ) )
+      `CMD_INSERT_RAND( gen_rand_key( 0, 0, 7 ) )
+      `CMD_DELETE     ( gen_rand_key( 0, 0, 7 ) )
     end
   
+  cmds.shuffle( );
+
+  foreach( cmds[i] )
+    begin
+      send_to_dut_c( cmds[i] );
+    end
+
+endtask
+
+// just inserting a lot data 
+task test_07( input int insert_cmd_cnt );
+  ht_command_t cmds[$];
+  
+  $display("%m:");
+
+  for( int c = 0; c < insert_cmd_cnt; c++ )
+    begin
+      `CMD_INSERT_RAND( gen_rand_key( ) );
+    end
+  
+  foreach( cmds[i] )
+    begin
+      send_to_dut_c( cmds[i] );
+    end
+endtask
+
+task test_08( input int search_cmd_cnt, 
+              input int delete_cmd_cnt );
+
+  ht_command_t cmds[$];
+  bit [KEY_WIDTH-1:0] existing_key;
+
+  for( int c = 0; c < search_cmd_cnt; c++ )
+    begin
+      if( env.scb.ref_ht.get_key_that_exists( existing_key ) == 0 )
+        begin
+          `CMD_SEARCH( existing_key );
+        end
+    end
+
+  for( int c = 0; c < delete_cmd_cnt; c++ )
+    begin
+      if( env.scb.ref_ht.get_key_that_exists( existing_key ) == 0 )
+        begin
+          `CMD_DELETE( existing_key );
+        end
+    end
+
   cmds.shuffle( );
 
   foreach( cmds[i] )
@@ -269,6 +320,8 @@ initial
     test_04( );
     test_05( );
     test_06( );
+    test_07( 2**TABLE_ADDR_WIDTH + 10 );
+    test_08( 100, 200 );
 
     wait_end_of_tests( );
 
