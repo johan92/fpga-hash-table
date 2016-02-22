@@ -5,6 +5,7 @@ vlib work
 vlog -coverall ../rtl/hash_table_pkg.sv
 vlog -coverall ../tb/ht_tb_pkg.sv
 vlog -coverall ../tb/ht_res_monitor.sv
+vlog -coverall ../tb/tables_monitor.sv
 vlog -coverall top_tb.sv 
 vlog -coverall ../rtl/*.sv 
 vlog -coverall ../rtl/*.v 
@@ -23,7 +24,8 @@ toggle add -r sim:/top_tb/dut/resm/*
 
 # running simulation for some time
 # you can change for run -all for infinity simulation :-)
-run 10000ns
+run 10000000us
+#run 100us
 
 coverage save 1.ucdb
 

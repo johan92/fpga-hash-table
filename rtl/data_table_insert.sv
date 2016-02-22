@@ -282,11 +282,31 @@ assign head_table_if.wr_en            = state_first_tick && ( state == NO_HEAD_P
 
 assign empty_addr_rd_ack_o            = state_first_tick && ( ( state == NO_HEAD_PTR_WR_DATA_S  ) ||
                                                               ( state == ON_TAIL_UPD_NEXT_PTR_S ) );
+
+
+ht_chain_state_t chain_state;
+
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    chain_state <= NO_CHAIN;
+  else
+    if( next_state != state )
+      begin
+        case( next_state )
+          NO_EMPTY_ADDR_S           : chain_state <= NO_CHAIN;
+          NO_HEAD_PTR_WR_HEAD_PTR_S : chain_state <= IN_HEAD;
+          ON_TAIL_WR_DATA_S         : chain_state <= IN_TAIL;
+          // no default: just keep old value
+        endcase
+      end
+
+
 always_comb
   begin
     result_o.cmd         = task_locked.cmd;
     result_o.bucket      = task_locked.bucket;
     result_o.found_value = '0;
+    result_o.chain_state = chain_state;
 
     case( state )
       KEY_MATCH_S:     result_o.rescode = INSERT_SUCCESS_SAME_KEY;
@@ -294,6 +314,8 @@ always_comb
       default:         result_o.rescode = INSERT_SUCCESS;
     endcase
   end
+
+
 
 assign result_valid_o = ( state == KEY_MATCH_S            ) ||
                         ( state == NO_EMPTY_ADDR_S        ) ||

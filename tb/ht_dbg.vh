@@ -37,11 +37,11 @@ function string result2str( input ht_result_t result );
   string s;
   case( result.cmd.opcode )
     OP_SEARCH:
-      $sformat( s, "key = 0x%x value = 0x%x rescode = %s", 
-                    result.cmd.key, result.found_value, result.rescode );
+      $sformat( s, "key = 0x%x value = 0x%x rescode = %s chain_state = %s", 
+                    result.cmd.key, result.found_value, result.rescode, result.chain_state );
     OP_INSERT, OP_DELETE:
-      $sformat( s, "key = 0x%x value = 0x%x rescode = %s", 
-                    result.cmd.key, result.cmd.value, result.rescode );
+      $sformat( s, "key = 0x%x value = 0x%x rescode = %s chain_state = %s", 
+                    result.cmd.key, result.cmd.value, result.rescode, result.chain_state );
   endcase
   
   return s;

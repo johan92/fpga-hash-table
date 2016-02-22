@@ -31,6 +31,16 @@ package hash_table;
     KEY_NO_MATCH_HAVE_NEXT_PTR,
     GOT_TAIL
   } ht_data_table_state_t;
+  
+  typedef enum int unsigned {
+    NO_CHAIN,
+
+    IN_HEAD,
+    IN_MIDDLE,
+    IN_TAIL,
+
+    IN_TAIL_NO_MATCH
+  } ht_chain_state_t;
 
   typedef struct packed {
     logic [HEAD_PTR_WIDTH-1:0] ptr;
@@ -67,7 +77,10 @@ package hash_table;
     logic  [BUCKET_WIDTH-1:0]   bucket;
 
     // valid only for opcode = OP_SEARCH
-    logic [VALUE_WIDTH-1:0]     found_value;        
+    logic [VALUE_WIDTH-1:0]     found_value;       
+    
+    // only for verification
+    ht_chain_state_t            chain_state;
   } ht_result_t;
 
 endpackage

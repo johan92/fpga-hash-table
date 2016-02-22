@@ -134,15 +134,47 @@ always_ff @( posedge clk_i or posedge rst_i )
     if( rd_data_val_i && ( next_state == KEY_MATCH_S ) )
       found_value <= rd_data_i.value;
 
+
+ht_chain_state_t chain_state;
+
+logic was_rd_data_val;
+
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    was_rd_data_val <= 1'b0;
+  else
+    if( state == IDLE_S )
+      was_rd_data_val <= 1'b0;
+    else
+      if( rd_data_val_i )
+        was_rd_data_val <= 1'b1;
+
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    chain_state <= NO_CHAIN;
+  else
+    if( next_state != state )
+      begin
+        case( next_state )
+          NO_VALID_HEAD_PTR_S     : chain_state <= NO_CHAIN;
+          ON_TAIL_WITHOUT_MATCH_S : chain_state <= IN_TAIL_NO_MATCH;
+          
+          KEY_MATCH_S             : chain_state <= ( got_tail == 1'b0 ) ? ( IN_MIDDLE ) : 
+                                                                          ( ( was_rd_data_val ) ? ( IN_TAIL ) : IN_HEAD );
+                                            
+          // no default: just keep old value
+        endcase
+      end
+
 always_comb
   begin
     result_o.cmd         = task_locked.cmd;
     result_o.bucket      = task_locked.bucket;
 
     result_o.found_value = found_value;
-
-    result_o.rescode   = ( state == KEY_MATCH_S ) ? ( SEARCH_FOUND                ):
-                                                    ( SEARCH_NOT_SUCCESS_NO_ENTRY );
+    result_o.chain_state = chain_state;
+    result_o.rescode     = ( state == KEY_MATCH_S ) ? ( SEARCH_FOUND                ):
+                                                      ( SEARCH_NOT_SUCCESS_NO_ENTRY );
   end
 
 assign result_valid_o   = ( state == KEY_MATCH_S             ) ||

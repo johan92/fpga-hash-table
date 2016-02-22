@@ -38,15 +38,25 @@ task send_to_dut_c( input ht_command_t c );
   env.drv.gen2drv.put( c );
 endtask
 
-task send_to_dut( input bit [KEY_WIDTH-1:0] _key, bit [VALUE_WIDTH-1:0] _value, ht_opcode_t _opcode );
-  ht_command_t cmd;
-  cmd.key    = _key;
-  cmd.value  = _value;
-  cmd.opcode = _opcode;
+function bit [KEY_WIDTH-1:0] gen_rand_key( int max_bucket_num = ( 2**BUCKET_WIDTH - 1 ), 
+                                           int max_key_value  = ( 2**( KEY_WIDTH - BUCKET_WIDTH ) - 1 ) );
+  bit [BUCKET_WIDTH-1:0] bucket_num;
+  bit [KEY_WIDTH-1:0]    gen_key;
+
+  if( hash_table::HASH_TYPE != "dummy" )
+    begin
+      $display("%m: hash_type = %s not supported here!", hash_table::HASH_TYPE );
+      $fatal();
+    end
+
+  bucket_num = $urandom_range( max_bucket_num , 0 );
+  gen_key    = $urandom_range( max_key_value, 0 );
   
-  // using hierarchial access to put command in mailbox
-  env.drv.gen2drv.put( cmd );
-endtask 
+  // replace high bits by bucket_num (is needs in dummy hash)
+  gen_key[ KEY_WIDTH - 1 : KEY_WIDTH - BUCKET_WIDTH ] = bucket_num;
+  
+  return gen_key;
+endfunction
 
 `define CMD( _OP, _KEY, _VALUE ) cmds.push_back( '{ opcode : _OP, key : _KEY, value : _VALUE } ); 
 
@@ -60,6 +70,7 @@ endtask
 
 task test_01( );
   ht_command_t cmds[$];
+  $display("%m:");
   
   `CMD_INSERT( 32'h01_00_00_00, 16'h1234 )
   `CMD_INSERT( 32'h01_00_10_00, 16'h1235 )
@@ -73,6 +84,7 @@ task test_01( );
   `CMD_SEARCH( 32'h01_00_00_01 )
   `CMD_SEARCH( 32'h01_00_00_01 )
   `CMD_SEARCH( 32'h01_00_00_03 )
+  
 
   foreach( cmds[i] )
     begin
@@ -82,6 +94,8 @@ endtask
 
 task test_02( );
   ht_command_t cmds[$];
+  
+  $display("%m:");
   
   `CMD_INSERT_RAND( 32'h00_00_00_00 )
   `CMD_INSERT_RAND( 32'h01_00_00_00 )
@@ -106,6 +120,8 @@ endtask
 
 task test_03( );
   ht_command_t cmds[$];
+  
+  $display("%m:");
   
   `CMD_SEARCH      ( 32'h04_00_00_00 )
   `CMD_DELETE      ( 32'h04_11_11_11 )
@@ -184,6 +200,48 @@ task test_04( );
     end
 endtask 
 
+task test_05( );
+  ht_command_t cmds[$];
+  
+  $display("%m:");
+  
+  for( int c = 0; c < 5000; c++ )
+    begin
+      `CMD_SEARCH      ( gen_rand_key( 15, 7 ) )
+      `CMD_INSERT_RAND ( gen_rand_key( 15, 7 ) )
+      `CMD_DELETE      ( gen_rand_key( 15, 7 ) )
+    end
+  
+  cmds.shuffle( );
+
+  foreach( cmds[i] )
+    begin
+      send_to_dut_c( cmds[i] );
+    end
+
+endtask
+
+task test_06( );
+  ht_command_t cmds[$];
+  
+  $display("%m:");
+
+  for( int c = 0; c < 1000; c++ )
+    begin
+      `CMD_SEARCH     ( gen_rand_key( 0, 7 ) )
+      `CMD_INSERT_RAND( gen_rand_key( 0, 7 ) )
+      `CMD_DELETE     ( gen_rand_key( 0, 7 ) )
+    end
+  
+  cmds.shuffle( );
+
+  foreach( cmds[i] )
+    begin
+      send_to_dut_c( cmds[i] );
+    end
+
+endtask
+
 initial
   begin
     wait( rst_done )
@@ -192,6 +250,8 @@ initial
     test_02( );
     test_03( );
     test_04( );
+    //test_05( );
+    //test_06( );
   end
 
 

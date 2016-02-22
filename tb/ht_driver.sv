@@ -8,7 +8,7 @@ class ht_driver;
   ht_command_t c;
 
   function new( input mailbox #( ht_command_t ) _drv2scb, virtual ht_cmd_if _cmd_if );
-    this.gen2drv = new( );
+    this.gen2drv = new( 1 );
     this.drv2scb = _drv2scb;
     this.__if    = _cmd_if;
     

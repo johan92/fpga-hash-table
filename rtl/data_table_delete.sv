@@ -312,9 +312,31 @@ assign result_o.rescode     = ( ( state == NO_VALID_HEAD_PTR_S     ) ||
                                 ( state == IN_TAIL_WITHOUT_MATCH_S ) ) ? ( DELETE_NOT_SUCCESS_NO_ENTRY ):
                                                                          ( DELETE_SUCCESS              );
 
+ht_chain_state_t chain_state;
+
+always_ff @( posedge clk_i or posedge rst_i )
+  if( rst_i )
+    chain_state <= NO_CHAIN;
+  else
+    if( state != next_state )
+      begin
+        case( next_state )
+          NO_VALID_HEAD_PTR_S     : chain_state <= NO_CHAIN;
+          IN_TAIL_WITHOUT_MATCH_S : chain_state <= IN_TAIL_NO_MATCH;
+          KEY_MATCH_IN_HEAD_S     : chain_state <= IN_HEAD;
+          KEY_MATCH_IN_MIDDLE_S   : chain_state <= IN_MIDDLE;
+          KEY_MATCH_IN_TAIL_S     : chain_state <= IN_TAIL;
+          // no default: just keep old value
+        endcase
+      end
+
+assign result_o.chain_state = chain_state; 
+
 assign result_valid_o = ( state == CLEAR_RAM_AND_PTR_S      ) ||
                         ( state == NO_VALID_HEAD_PTR_S      ) ||
                         ( state == IN_TAIL_WITHOUT_MATCH_S  );
+
+
 
 // synthesis translate_off
 `include "../tb/ht_dbg.vh"
