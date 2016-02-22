@@ -96,6 +96,7 @@ logic                   key_match;
 logic                   got_tail;
 logic [A_WIDTH-1:0]     rd_addr;
 ram_data_t              prev_rd_data;
+ram_data_t              prev_prev_rd_data;
 logic [A_WIDTH-1:0]     prev_rd_addr;
 
 logic                   rd_data_val;
@@ -199,13 +200,22 @@ assign got_tail  = ( rd_data_i.next_ptr_val == 1'b0  );
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
-    rd_addr <= '0;
+    begin
+      rd_addr      <= '0;
+      prev_rd_addr <= '0;
+    end
   else
     if( ( state == IDLE_S ) && ( next_state == READ_HEAD_S ) )
-      rd_addr <= task_i.head_ptr;
+      begin
+        rd_addr      <= task_i.head_ptr;
+        prev_rd_addr <= rd_addr;
+      end
     else
       if( rd_data_val && ( next_state == GO_ON_CHAIN_S ) )
-        rd_addr <= rd_data_i.next_ptr;
+        begin
+          rd_addr      <= rd_data_i.next_ptr;
+          prev_rd_addr <= rd_addr;
+        end
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
@@ -215,17 +225,17 @@ always_ff @( posedge clk_i or posedge rst_i )
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
-    prev_rd_data <= '0;
+    begin
+      prev_rd_data <= '0;
+      prev_prev_rd_data <= '0;
+    end
   else
     if( rd_data_val )
-      prev_rd_data <= rd_data_i;
+      begin
+        prev_rd_data      <= rd_data_i;
+        prev_prev_rd_data <= prev_rd_data;
+      end
 
-always_ff @( posedge clk_i or posedge rst_i )
-  if( rst_i )
-    prev_rd_addr <= '0;
-  else
-    if( rd_en_o ) //FIXME
-      prev_rd_addr <= rd_addr;
 
 assign task_ready_o = ( state == IDLE_S );
 
@@ -246,7 +256,7 @@ always_ff @( posedge clk_i )
 
 always_comb
   begin
-    wr_data_o = prev_rd_data;
+    wr_data_o = prev_prev_rd_data;
     wr_addr_o = 'x;
 
     case( state )
@@ -277,7 +287,7 @@ always_comb
       default:
         begin
           // do nothing
-          wr_data_o = prev_rd_data;
+          wr_data_o = prev_prev_rd_data;
           wr_addr_o = 'x;
         end
     endcase

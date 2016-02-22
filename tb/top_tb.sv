@@ -165,6 +165,24 @@ task test_03( );
 
 endtask
 
+task test_04( );
+  ht_command_t cmds[$];
+  
+  $display("%m:");
+
+  `CMD_INSERT_RAND( 32'h05_00_00_00 )
+  `CMD_INSERT_RAND( 32'h05_00_00_01 )
+  
+  `CMD_DELETE     ( 32'h05_00_00_01 )
+  
+  `CMD_INSERT_RAND( 32'h05_00_00_02 )
+  `CMD_INSERT_RAND( 32'h05_00_00_03 )
+  
+  foreach( cmds[i] )
+    begin
+      send_to_dut_c( cmds[i] );
+    end
+endtask 
 
 initial
   begin
@@ -173,6 +191,7 @@ initial
     test_01( );
     test_02( );
     test_03( );
+    test_04( );
   end
 
 
