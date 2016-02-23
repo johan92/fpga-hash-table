@@ -1,8 +1,13 @@
-/*
-  Environment that just creates driver, monitor and scoreboard,
-  and connect all stuff :) 
+//-----------------------------------------------------------------------------
+// Project       : fpga-hash-table
+//-----------------------------------------------------------------------------
+// Author        : Ivan Shevchuk (github/johan92)
+//-----------------------------------------------------------------------------
+// Description:
+// Environment that just creates driver, monitor and scoreboard,
+// and connect all stuff :) 
+//-----------------------------------------------------------------------------
 
-*/
 
 `ifndef _HT_ENVIRONMENT_
 `define _HT_ENVIRONMENT_

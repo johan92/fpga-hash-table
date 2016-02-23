@@ -1,3 +1,9 @@
+//-----------------------------------------------------------------------------
+// Project       : fpga-hash-table
+//-----------------------------------------------------------------------------
+// Author        : Ivan Shevchuk (github/johan92)
+//-----------------------------------------------------------------------------
+
 import hash_table::*;
 
 interface ht_res_monitor(
@@ -18,8 +24,6 @@ logic       result_locked_val = 1'b0;
 
 int         bucket_occup   [BUCKET_CNT-1:0]; 
 ht_result_t result_history [HISTORY_DELAY:1];
-
-// ht_result_t bucket_history [BUCKET_CNT-1:0][DELAY-1:0];
 
 sequence ABC;
   @( posedge clk_i )

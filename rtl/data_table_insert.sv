@@ -1,41 +1,42 @@
-// ******* Insert Data logic *******
-
-/*
-Insert algo:
-  if( no valid head_ptr )
-    begin
-      goto: get new empty addr
-    end
-  else
-    begin
-      start seaching - tring to find data with the same key
-      at the end of the search we will be at tail of chain
-
-      if( key matched )
-        just update data in this addr, 
-        INSERT_SUCCESS_SAME_KEY
-    end
-
-  get new empty addr:
-    if( no empty addr - table is full )
-      INSERT_NOT_SUCCESS_TABLE_IS_FULL
-    else
-      if( it was no valid head ptr ) 
-        begin
-          update info about head ptr in head table
-          write data in addr, next_ptr is null
-
-          INSERT_SUCCESS
-        end
-      // there was some data in chain, so, just adding at end of chain
-      else
-        begin
-          write data in addr, next_ptr is null
-          update ptr in previous chain addr
-
-          INSERT_SUCCESS
-        end
-*/
+//-----------------------------------------------------------------------------
+// Project       : fpga-hash-table
+//-----------------------------------------------------------------------------
+// Author        : Ivan Shevchuk (github/johan92)
+//-----------------------------------------------------------------------------
+// Insert algo:
+//   if( no valid head_ptr )
+//     begin
+//       goto: get new empty addr
+//     end
+//   else
+//     begin
+//       start seaching - tring to find data with the same key
+//       at the end of the search we will be at tail of chain
+//  
+//       if( key matched )
+//         just update data in this addr, 
+//         INSERT_SUCCESS_SAME_KEY
+//     end
+//  
+//   get new empty addr:
+//     if( no empty addr - table is full )
+//       INSERT_NOT_SUCCESS_TABLE_IS_FULL
+//     else
+//       if( it was no valid head ptr ) 
+//         begin
+//           update info about head ptr in head table
+//           write data in addr, next_ptr is null
+//  
+//           INSERT_SUCCESS
+//         end
+//       // there was some data in chain, so, just adding at end of chain
+//       else
+//         begin
+//           write data in addr, next_ptr is null
+//           update ptr in previous chain addr
+//  
+//           INSERT_SUCCESS
+//         end
 
 import hash_table::*;
 

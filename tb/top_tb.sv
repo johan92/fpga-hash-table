@@ -1,3 +1,9 @@
+//-----------------------------------------------------------------------------
+// Project       : fpga-hash-table
+//-----------------------------------------------------------------------------
+// Author        : Ivan Shevchuk (github/johan92)
+//-----------------------------------------------------------------------------
+
 import hash_table::*;
 import ht_tb::*;
 
@@ -400,12 +406,12 @@ tables_monitor tm(
   .clk_i                                  ( clk                    ),
   .rst_i                                  ( rst                    ),
 
-    // head_ptr table
+  // head_ptr table
   .head_table_wr_data_i                   ( tm_head_table_wr_data  ),
   .head_table_wr_addr_i                   ( tm_head_table_wr_addr  ),
   .head_table_wr_en_i                     ( tm_head_table_wr_en    ),
 
-    // data table
+  // data table
   .data_table_wr_data_i                   ( tm_data_table_wr_data  ),
   .data_table_wr_addr_i                   ( tm_data_table_wr_addr  ),
   .data_table_wr_en_i                     ( tm_data_table_wr_en    ),

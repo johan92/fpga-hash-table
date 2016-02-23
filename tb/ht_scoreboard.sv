@@ -1,9 +1,14 @@
-/*
-  Little scoreboard for hashtable:
-    it get commands and dut results, and execute this command on 
-    hash table reference model. if result is not the same - error
-    will be displayed.
-*/
+//-----------------------------------------------------------------------------
+// Project       : fpga-hash-table
+//-----------------------------------------------------------------------------
+// Author        : Ivan Shevchuk (github/johan92)
+//-----------------------------------------------------------------------------
+// Description:
+//   Little scoreboard for hashtable:
+//   it get commands and dut results, and execute this command on 
+//   hash table reference model. if result is not the same - error
+//   will be displayed.
+//-----------------------------------------------------------------------------
 
 `ifndef _HT_SCOREBOARD_
 `define _HT_SCOREBOARD_
