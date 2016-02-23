@@ -43,7 +43,7 @@ always_comb
     pdata_in.cmd = ht_cmd_in.cmd;
   end
 
-assign pdata_in_valid   = ht_cmd_in.valid;
+assign pdata_in_valid  = ht_cmd_in.valid;
 assign ht_cmd_in.ready = pdata_in_ready;
 
 calc_hash calc_hash (
@@ -59,7 +59,7 @@ calc_hash calc_hash (
   .pdata_out_ready_i                      ( pdata_calc_hash_ready )
 );
 
-head_table head_ptr_table (
+head_table h_tbl (
   .clk_i                                  ( clk_i                      ),
   .rst_i                                  ( rst_i                      ),
 
@@ -78,7 +78,7 @@ head_table head_ptr_table (
 
 );
 
-data_table data_table (
+data_table d_tbl (
   .clk_i                                  ( clk_i                   ),
   .rst_i                                  ( rst_i                   ),
 

@@ -384,17 +384,17 @@ assign tm_head_table_wr_data.ptr_val = dut.head_table_if.wr_data_ptr_val;
 assign tm_head_table_wr_addr         = dut.head_table_if.wr_addr;
 assign tm_head_table_wr_en           = dut.head_table_if.wr_en;
 
-assign tm_data_table_wr_data         = dut.data_table.ram_wr_data; 
-assign tm_data_table_wr_addr         = dut.data_table.ram_wr_addr;
-assign tm_data_table_wr_en           = dut.data_table.ram_wr_en;
-assign tm_data_table_rd_addr         = dut.data_table.ram_rd_addr;
-assign tm_data_table_rd_en           = dut.data_table.ram_rd_en;
+assign tm_data_table_wr_data         = dut.d_tbl.ram_wr_data; 
+assign tm_data_table_wr_addr         = dut.d_tbl.ram_wr_addr;
+assign tm_data_table_wr_en           = dut.d_tbl.ram_wr_en;
+assign tm_data_table_rd_addr         = dut.d_tbl.ram_rd_addr;
+assign tm_data_table_rd_en           = dut.d_tbl.ram_rd_en;
 
-assign empty_ptr_add_addr            = dut.data_table.add_empty_ptr; 
-assign empty_ptr_add_addr_en         = dut.data_table.add_empty_ptr_en;
-assign empty_ptr_del_addr            = dut.data_table.empty_addr;
-assign empty_ptr_del_addr_en         = dut.data_table.empty_addr_rd_ack && 
-                                       dut.data_table.empty_addr_val;
+assign empty_ptr_add_addr            = dut.d_tbl.add_empty_ptr; 
+assign empty_ptr_add_addr_en         = dut.d_tbl.add_empty_ptr_en;
+assign empty_ptr_del_addr            = dut.d_tbl.empty_addr;
+assign empty_ptr_del_addr_en         = dut.d_tbl.empty_addr_rd_ack && 
+                                       dut.d_tbl.empty_addr_val;
 tables_monitor tm(
 
   .clk_i                                  ( clk                    ),

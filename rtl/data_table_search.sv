@@ -212,10 +212,10 @@ always_ff @( posedge clk_i )
       print_new_task( task_i );
     
     if( rd_data_val_i )
-      print_ram_data( "RD_DATA", rd_addr_latched, rd_data_i );
+      print_ram_data( "RD", rd_addr_latched, rd_data_i );
 
     if( result_valid_o && result_ready_i )
-      print_result( "SEARCH_RES", result_o );
+      print_result( "RES", result_o );
 
     print_state_transition( );
   end

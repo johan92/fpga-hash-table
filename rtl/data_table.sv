@@ -1,20 +1,20 @@
 import hash_table::*;
 
 module data_table( 
-  input                clk_i,
-  input                rst_i,
+  input                                clk_i,
+  input                                rst_i,
 
-  input        ht_pdata_t      pdata_in_i,
-  input                        pdata_in_valid_i,
-  output       logic           pdata_in_ready_o,
+  input                ht_pdata_t      pdata_in_i,
+  input                                pdata_in_valid_i,
+  output               logic           pdata_in_ready_o,
 
-  ht_res_if.master     ht_res_out,
+  ht_res_if.master                     ht_res_out,
   
-  head_table_if.master head_table_if,
+  head_table_if.master                 head_table_if,
 
   // interface to clear [fill with zero] all ram content
-  input                clear_ram_run_i,
-  output logic         clear_ram_done_o
+  input                                clear_ram_run_i,
+  output logic                         clear_ram_done_o
 
 );
 localparam D_WIDTH     = $bits( ram_data_t );
@@ -74,7 +74,7 @@ head_table_if head_table_delete_if(
 data_table_search_wrapper #( 
   .ENGINES_CNT                            ( 5                          ),
   .RAM_LATENCY                            ( RAM_LATENCY                )
-) search_engine (
+) sea_eng (
 
   .clk_i                                  ( clk_i                      ),
   .rst_i                                  ( rst_i                      ),
@@ -101,7 +101,7 @@ assign wr_en_w  [SEARCH_] = 1'b0;
 
 data_table_insert #(
   .RAM_LATENCY                            ( RAM_LATENCY                 )
-) insert_engine (
+) ins_eng (
   .clk_i                                  ( clk_i                       ),
   .rst_i                                  ( rst_i                       ),
     
@@ -133,7 +133,7 @@ data_table_insert #(
 
 data_table_delete #(
   .RAM_LATENCY                            ( RAM_LATENCY                     )
-) delete_engine ( 
+) del_eng ( 
   .clk_i                                  ( clk_i                           ),
   .rst_i                                  ( rst_i                           ),
     
