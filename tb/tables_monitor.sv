@@ -32,6 +32,7 @@ localparam DATA_TABLE_WORDS = 2**TABLE_ADDR_WIDTH;
 head_ram_data_t head_table [HEAD_TABLE_WORDS-1:0];
 ram_data_t      data_table [DATA_TABLE_WORDS-1:0];
 
+// reference head and data table
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
     begin
@@ -76,20 +77,6 @@ always_ff @( posedge clk_i or posedge rst_i )
       if( empty_ptr_del_addr_en_i )
         empty_ptr_mask[ empty_ptr_del_addr_i ] <= 1'b0;
     end
-
-always_ff @( posedge clk_i )
-  begin
-    if( empty_ptr_add_addr_en_i && empty_ptr_mask[ empty_ptr_add_addr_i ] == 1'b1 )
-      begin 
-        $error( "ERROR: trying to empty addr = 0x%x, that is already empty!", empty_ptr_add_addr_i );
-      end
-    
-    if( empty_ptr_del_addr_en_i && empty_ptr_mask[ empty_ptr_del_addr_i ] == 1'b0 )
-      begin 
-        $error( "ERROR: trying to make not empty addr = 0x%x, that is already not empty!", empty_ptr_del_addr_i );
-      end
-  end
-
 
 function automatic void check_head_table_equal_ptr( );
   int ptr_cnt [BUCKETS_CNT-1:0];
@@ -186,6 +173,8 @@ function automatic void go_through_all_data( );
 
 endfunction 
 
+// checking "thread"
+// do it at negedge to exclude some races
 always_ff @( negedge clk_i )
   begin
     // we don't want check when something changing in table...
@@ -195,5 +184,29 @@ always_ff @( negedge clk_i )
         go_through_all_data( );
       end
   end
+
+// checking read/write to empty_ptr_storage  
+always_ff @( posedge clk_i )
+  begin
+    if( empty_ptr_add_addr_en_i && empty_ptr_mask[ empty_ptr_add_addr_i ] == 1'b1 )
+      begin 
+        $error( "ERROR: trying to empty addr = 0x%x, that is already empty!", empty_ptr_add_addr_i );
+      end
+    
+    if( empty_ptr_del_addr_en_i && empty_ptr_mask[ empty_ptr_del_addr_i ] == 1'b0 )
+      begin 
+        $error( "ERROR: trying to make not empty addr = 0x%x, that is already not empty!", empty_ptr_del_addr_i );
+      end
+  end
+
+// checking that we don't read from addreses that we think is empty 
+always_ff @( posedge clk_i )
+  if( data_table_rd_en_i )
+    begin
+      if( empty_ptr_mask[ data_table_rd_addr_i ] == 1'b1 )
+        begin
+          $error( "ERROR: reading from empty addr = 0x%x", data_table_rd_addr_i );
+        end
+    end
 
 endmodule
