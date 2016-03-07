@@ -16,22 +16,19 @@ module data_table(
 
   ht_res_if.master                     ht_res_out,
   
-  head_table_if.master                 head_table_if,
-
-  // interface to clear [fill with zero] all ram content
-  input                                clear_ram_run_i,
-  output logic                         clear_ram_done_o
+  head_table_if.master                 head_table_if
 
 );
 localparam D_WIDTH     = $bits( ram_data_t );
 localparam A_WIDTH     = HEAD_PTR_WIDTH;
 localparam RAM_LATENCY = 2;
 
-localparam SEARCH_ = 0;
-localparam INSERT_ = 1;
-localparam DELETE_ = 2;
+localparam INIT_   = 0;
+localparam SEARCH_ = 1;
+localparam INSERT_ = 2;
+localparam DELETE_ = 3;
 
-localparam DIR_CNT = 3; 
+localparam DIR_CNT = 4; 
 localparam DIR_CNT_WIDTH = $clog2( DIR_CNT );
 
 ram_data_t                ram_rd_data;
@@ -55,6 +52,12 @@ logic       [A_WIDTH-1:0] empty_addr;
 logic                     empty_addr_val;
 logic                     empty_addr_rd_ack;
 
+logic       [A_WIDTH-1:0] init_add_empty_ptr;
+logic                     init_add_empty_ptr_en;
+
+logic       [A_WIDTH-1:0] delete_add_empty_ptr;
+logic                     delete_add_empty_ptr_en;
+
 logic       [A_WIDTH-1:0] add_empty_ptr;
 logic                     add_empty_ptr_en;
 
@@ -69,6 +72,10 @@ ht_res_if ht_eng_res[DIR_CNT-1:0](
   .clk ( clk_i )
 );
 
+head_table_if head_table_init_if( 
+  .clk( clk_i )
+);
+
 head_table_if head_table_insert_if( 
   .clk( clk_i )
 );
@@ -76,6 +83,37 @@ head_table_if head_table_insert_if(
 head_table_if head_table_delete_if( 
   .clk( clk_i )
 );
+
+logic empty_ptr_storage_srst_w;
+
+data_table_init init_eng( 
+  .clk_i                                  ( clk_i                    ),
+  .rst_i                                  ( rst_i                    ),
+
+  .task_i                                 ( task_w                   ),
+  .task_valid_i                           ( task_valid [INIT_]       ),
+  .task_ready_o                           ( task_ready [INIT_]       ),
+    
+  .wr_addr_o                              ( wr_addr_w [INIT_]        ),
+  .wr_data_o                              ( wr_data_w [INIT_]        ),
+  .wr_en_o                                ( wr_en_w   [INIT_]        ),
+    
+  .head_table_if                          ( head_table_init_if       ),
+
+  // to empty pointer storage
+  .empty_ptr_storage_srst_o               ( empty_ptr_storage_srst_w ),
+  .add_empty_ptr_o                        ( init_add_empty_ptr       ),
+  .add_empty_ptr_en_o                     ( init_add_empty_ptr_en    ),
+    
+    // output interface with search result
+  .result_o                               ( ht_eng_res[INIT_].result ),
+  .result_valid_o                         ( ht_eng_res[INIT_].valid  ),
+  .result_ready_i                         ( ht_eng_res[INIT_].ready  )
+
+);
+
+assign rd_addr_w [ INIT_ ] = '0;
+assign rd_en_w   [ INIT_ ] = 1'b0;
 
 data_table_search_wrapper #( 
   .ENGINES_CNT                            ( 5                          ),
@@ -157,8 +195,8 @@ data_table_delete #(
   .wr_en_o                                ( wr_en_w          [DELETE_]      ),
     
     // to empty pointer storage
-  .add_empty_ptr_o                        ( add_empty_ptr                   ),
-  .add_empty_ptr_en_o                     ( add_empty_ptr_en                ),
+  .add_empty_ptr_o                        ( delete_add_empty_ptr            ),
+  .add_empty_ptr_en_o                     ( delete_add_empty_ptr_en         ),
 
   .head_table_if                          ( head_table_delete_if            ),
 
@@ -170,6 +208,7 @@ data_table_delete #(
 
 assign task_w = pdata_in_i;
 
+assign task_proccessing[ INIT_   ] = !task_ready[ INIT_   ];
 assign task_proccessing[ SEARCH_ ] = search_task_in_proccess;
 assign task_proccessing[ INSERT_ ] = !task_ready[ INSERT_ ];
 assign task_proccessing[ DELETE_ ] = !task_ready[ DELETE_ ];
@@ -177,15 +216,31 @@ assign task_proccessing[ DELETE_ ] = !task_ready[ DELETE_ ];
 always_comb
   begin
     pdata_in_ready_o = 1'b1;
-
+    
+    task_valid[ INIT_   ] = pdata_in_valid_i && ( task_w.cmd.opcode == OP_INIT   );
     task_valid[ SEARCH_ ] = pdata_in_valid_i && ( task_w.cmd.opcode == OP_SEARCH );
     task_valid[ INSERT_ ] = pdata_in_valid_i && ( task_w.cmd.opcode == OP_INSERT );
     task_valid[ DELETE_ ] = pdata_in_valid_i && ( task_w.cmd.opcode == OP_DELETE );
     
     case( task_w.cmd.opcode )
+      OP_INIT:
+        begin
+          if( task_proccessing[ SEARCH_ ] || task_proccessing[ INSERT_ ] || 
+              task_proccessing[ DELETE_ ] )
+              begin
+                pdata_in_ready_o    = 1'b0;
+                task_valid[ INIT_ ] = 1'b0;
+              end
+          else
+            begin
+              pdata_in_ready_o = task_ready[ INIT_ ];
+            end
+        end
+
       OP_SEARCH:
         begin
-          if( task_proccessing[ INSERT_ ] || task_proccessing[ DELETE_ ] )
+          if( task_proccessing[ INIT_   ] || task_proccessing[ INSERT_ ] || 
+              task_proccessing[ DELETE_ ] )
             begin
               pdata_in_ready_o      = 1'b0;
               task_valid[ SEARCH_ ] = 1'b0;
@@ -198,7 +253,8 @@ always_comb
 
       OP_INSERT:
         begin
-          if( task_proccessing[ SEARCH_ ] || task_proccessing[ DELETE_ ] )
+          if( task_proccessing[ INIT_   ] || task_proccessing[ SEARCH_ ] || 
+              task_proccessing[ DELETE_ ] )
             begin
               pdata_in_ready_o      = 1'b0;
               task_valid[ INSERT_ ] = 1'b0;
@@ -209,7 +265,8 @@ always_comb
 
       OP_DELETE:
         begin
-          if( task_proccessing[ SEARCH_ ] || task_proccessing[ INSERT_ ] )
+          if( task_proccessing[ INIT_   ] || task_proccessing[ SEARCH_ ] || 
+              task_proccessing[ INSERT_ ] )
             begin
               pdata_in_ready_o      = 1'b0;
               task_valid[ DELETE_ ] = 1'b0;
@@ -262,20 +319,28 @@ assign ram_wr_en   = wr_en_w   [ wr_sel ];
 // ******* MUX to head_table *******
 always_comb
   begin
-    if( head_table_insert_if.wr_en )
+    if( head_table_init_if.wr_en )
       begin
-        head_table_if.wr_addr         = head_table_insert_if.wr_addr;         
-        head_table_if.wr_data_ptr     = head_table_insert_if.wr_data_ptr;     
-        head_table_if.wr_data_ptr_val = head_table_insert_if.wr_data_ptr_val;
-        head_table_if.wr_en           = head_table_insert_if.wr_en; 
+        head_table_if.wr_addr         = head_table_init_if.wr_addr;         
+        head_table_if.wr_data_ptr     = head_table_init_if.wr_data_ptr;     
+        head_table_if.wr_data_ptr_val = head_table_init_if.wr_data_ptr_val;
+        head_table_if.wr_en           = head_table_init_if.wr_en; 
       end
     else
-      begin
-        head_table_if.wr_addr         = head_table_delete_if.wr_addr;         
-        head_table_if.wr_data_ptr     = head_table_delete_if.wr_data_ptr;     
-        head_table_if.wr_data_ptr_val = head_table_delete_if.wr_data_ptr_val;
-        head_table_if.wr_en           = head_table_delete_if.wr_en; 
-      end
+      if( head_table_insert_if.wr_en )
+        begin
+          head_table_if.wr_addr         = head_table_insert_if.wr_addr;         
+          head_table_if.wr_data_ptr     = head_table_insert_if.wr_data_ptr;     
+          head_table_if.wr_data_ptr_val = head_table_insert_if.wr_data_ptr_val;
+          head_table_if.wr_en           = head_table_insert_if.wr_en; 
+        end
+      else
+        begin
+          head_table_if.wr_addr         = head_table_delete_if.wr_addr;         
+          head_table_if.wr_data_ptr     = head_table_delete_if.wr_data_ptr;     
+          head_table_if.wr_data_ptr_val = head_table_delete_if.wr_data_ptr_val;
+          head_table_if.wr_en           = head_table_delete_if.wr_en; 
+        end
   end
 
 // ******* Muxing cmd result *******
@@ -290,12 +355,29 @@ ht_res_mux #(
 );
 // ******* Empty ptr store *******
 
+always_comb
+  begin
+    if( init_add_empty_ptr_en )
+      begin
+        add_empty_ptr     = init_add_empty_ptr; 
+        add_empty_ptr_en  = init_add_empty_ptr_en;
+      end
+    else
+      begin
+        add_empty_ptr     = delete_add_empty_ptr; 
+        add_empty_ptr_en  = delete_add_empty_ptr_en;
+      end
+  end
+
+
 empty_ptr_storage #(
   .A_WIDTH                                ( TABLE_ADDR_WIDTH  )
 ) empty_ptr_storage (
 
   .clk_i                                  ( clk_i             ),
   .rst_i                                  ( rst_i             ),
+
+  .srst_i                                 ( empty_ptr_storage_srst_w ),
     
   .add_empty_ptr_i                        ( add_empty_ptr     ),
   .add_empty_ptr_en_i                     ( add_empty_ptr_en  ),
@@ -305,37 +387,6 @@ empty_ptr_storage #(
   .next_empty_ptr_val_o                   ( empty_addr_val    )
 
 );
-
-// ******* Clear RAM logic *******
-logic               clear_ram_flag;
-logic [A_WIDTH-1:0] clear_addr;
-
-always_ff @( posedge clk_i or posedge rst_i )
-  if( rst_i )
-    clear_ram_flag <= 1'b0;
-  else
-    begin
-      if( clear_ram_run_i )
-        clear_ram_flag <= 1'b1;
-
-      if( clear_ram_done_o )
-        clear_ram_flag <= 1'b0;
-    end
-    
-always_ff @( posedge clk_i or posedge rst_i )
-  if( rst_i )
-    clear_addr <= '0;
-  else
-    if( clear_ram_run_i )
-      clear_addr <= '0;
-    else
-      if( clear_ram_flag )
-        clear_addr <= clear_addr + 1'd1;
-
-assign wr_addr          = '0; // ( clear_ram_flag ) ? ( clear_addr ) : ( 'x ); //FIXME
-assign wr_data          = '0; // ( clear_ram_flag ) ? ( '0         ) : ( 'x );
-assign wr_en            = '0; // ( clear_ram_flag ) ? ( 1'b1       ) : ( 'x ); 
-assign clear_ram_done_o = clear_ram_flag && ( clear_addr == '1 );
 
 true_dual_port_ram_single_clock #( 
   .DATA_WIDTH                             ( D_WIDTH           ), 

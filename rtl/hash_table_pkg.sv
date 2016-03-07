@@ -14,12 +14,15 @@ package hash_table;
   parameter HEAD_PTR_WIDTH   = TABLE_ADDR_WIDTH;
 
   typedef enum logic [1:0] {
+    OP_INIT,     // init/clear/reset ALL hash table
     OP_SEARCH,
     OP_INSERT,
     OP_DELETE
   } ht_opcode_t;
 
   typedef enum int unsigned {
+    INIT_SUCCESS,
+
     SEARCH_FOUND,
     SEARCH_NOT_SUCCESS_NO_ENTRY,
 

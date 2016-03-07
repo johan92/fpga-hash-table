@@ -24,6 +24,8 @@ module tables_monitor(
   input                        data_table_rd_en_i,
 
   // empty ptr storage 
+  input                        empty_ptr_srst_i,
+
   input [TABLE_ADDR_WIDTH-1:0] empty_ptr_add_addr_i,
   input                        empty_ptr_add_addr_en_i,
 
@@ -74,9 +76,12 @@ logic [TABLE_ADDR_CNT-1:0] empty_ptr_mask;
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
-    empty_ptr_mask <= '1;
+    empty_ptr_mask <= '0;
   else
     begin
+      if( empty_ptr_srst_i )
+        empty_ptr_mask <= '0;
+
       if( empty_ptr_add_addr_en_i )
         empty_ptr_mask[ empty_ptr_add_addr_i ] <= 1'b1;
 

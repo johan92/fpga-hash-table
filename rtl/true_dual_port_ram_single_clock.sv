@@ -7,9 +7,11 @@
 // Quartus II Verilog Template
 // True Dual Port RAM with single clock
 
-module true_dual_port_ram_single_clock
-#(parameter DATA_WIDTH=8, parameter ADDR_WIDTH=6, parameter REGISTER_OUT = 1)
-(
+module true_dual_port_ram_single_clock #( 
+  parameter DATA_WIDTH   = 8, 
+  parameter ADDR_WIDTH   = 6, 
+  parameter REGISTER_OUT = 1
+) (
         input clk,       
 	input [(DATA_WIDTH-1):0] data_a, data_b,
 	input [(ADDR_WIDTH-1):0] addr_a, addr_b,

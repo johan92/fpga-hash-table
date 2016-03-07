@@ -28,12 +28,25 @@ class ref_hash_table;
   endfunction
  
   function ht_result_t do_command( input ht_command_t cmd ); 
-    
+    key_t tmp;
+
     ht_result_t res;
     
     res.cmd = cmd;
                               
     case( cmd.opcode )
+      OP_INIT:
+        begin
+          if( ass_arr.first( tmp ) )
+            begin
+              do
+                ass_arr.delete( tmp );
+              while( ass_arr.next( tmp ) );
+            end
+
+          res.rescode = INIT_SUCCESS;
+        end
+
       OP_SEARCH:
         begin
           if( ass_arr.exists( cmd.key ) )

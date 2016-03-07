@@ -20,16 +20,6 @@ head_table_if head_table_if(
   .clk            ( clk_i            )
 );
 
-logic     head_table_clear_ram_run;
-logic     head_table_clear_ram_done;
-
-logic     data_table_clear_ram_run;
-logic     data_table_clear_ram_done;
-
-// FIXME : it should be from auto from reset
-assign head_table_clear_ram_run = 1'b0;
-assign data_table_clear_ram_run = 1'b0;
-
 ht_pdata_t  pdata_in;
 logic       pdata_in_valid;
 logic       pdata_in_ready;
@@ -77,10 +67,7 @@ head_table h_tbl (
   .pdata_out_valid_o                      ( pdata_head_table_valid     ),
   .pdata_out_ready_i                      ( pdata_head_table_ready     ),
     
-  .head_table_if                          ( head_table_if              ),
-
-  .clear_ram_run_i                        ( head_table_clear_ram_run   ),
-  .clear_ram_done_o                       ( head_table_clear_ram_done  )
+  .head_table_if                          ( head_table_if              )
 
 );
 
@@ -94,11 +81,7 @@ data_table d_tbl (
 
   .ht_res_out                             ( ht_res_out              ),
     
-  .head_table_if                          ( head_table_if           ),
-
-  // interface to clear [fill with zero] all ram content
-  .clear_ram_run_i                        ( data_table_clear_ram_run   ),
-  .clear_ram_done_o                       ( data_table_clear_ram_done  )
+  .head_table_if                          ( head_table_if           )
 
 );
 

@@ -10,6 +10,8 @@ module empty_ptr_storage #(
 
   input                clk_i,
   input                rst_i,
+
+  input                srst_i,
   
   // interface to add empty pointers
   input  [A_WIDTH-1:0] add_empty_ptr_i,
@@ -17,46 +19,36 @@ module empty_ptr_storage #(
   
   // interface to read empty pointers,
   // if val is zero - there is no more empty pointers
-  input                      next_empty_ptr_rd_ack_i,
-  output logic [A_WIDTH-1:0] next_empty_ptr_o,
-  output logic               next_empty_ptr_val_o
+  input                next_empty_ptr_rd_ack_i,
+  output [A_WIDTH-1:0] next_empty_ptr_o,
+  output               next_empty_ptr_val_o
 
 );
 
-// NOTE: 
-// now it at logic, because i'm lazy
-// it should be at fifo
+logic fifo_empty;
+logic fifo_full;
 
-localparam ADDR_CNT = 2**A_WIDTH;
+ht_scfifo #(
+  .DATA_W                                 ( A_WIDTH                 ),
+  .ADDR_W                                 ( A_WIDTH                 )
+) fifo (
+  .clk_i                                  ( clk_i                   ),
+  .rst_i                                  ( rst_i                   ),
 
-logic [ADDR_CNT-1:0] empty_ptr_mask;
+  .srst_i                                 ( srst_i                  ),
 
-always_ff @( posedge clk_i or posedge rst_i )
-  if( rst_i )
-    empty_ptr_mask <= '1;
-  else
-    if( next_empty_ptr_rd_ack_i && next_empty_ptr_val_o )
-      empty_ptr_mask[ next_empty_ptr_o ] <= 1'b0;
-    else
-      if( add_empty_ptr_en_i )
-        empty_ptr_mask[ add_empty_ptr_i ] <= 1'b1;
+  .wr_data_i                              ( add_empty_ptr_i         ),
+  .wr_req_i                               ( add_empty_ptr_en_i      ),
+   
+  .rd_req_i                               ( next_empty_ptr_rd_ack_i ),
+  .rd_data_o                              ( next_empty_ptr_o        ),
+ 
+  .empty_o                                ( fifo_empty              ),
+  .full_o                                 ( fifo_full               )
+  
+);
 
-always_comb
-  begin
-    next_empty_ptr_o     = '0;
-    next_empty_ptr_val_o = 1'b0;
-
-    for( int i = 0; i < ADDR_CNT; i++ )
-      begin
-        if( empty_ptr_mask[i] )
-          begin
-            next_empty_ptr_o     = i[$clog2(ADDR_CNT)-1:0];
-            next_empty_ptr_val_o = 1'b1;
-            break;
-          end
-      end
-  end
-
+assign next_empty_ptr_val_o = !fifo_empty;
 
 // synthesis translate_off
 

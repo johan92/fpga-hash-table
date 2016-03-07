@@ -19,11 +19,7 @@ module head_table (
   output                       pdata_out_valid_o,
   input                        pdata_out_ready_i,
   
-  head_table_if.slave          head_table_if,
-
-  // interface to clear [fill with zero] all ram content
-  input                        clear_ram_run_i,
-  output logic                 clear_ram_done_o
+  head_table_if.slave          head_table_if
 
 );
 
@@ -47,7 +43,6 @@ logic                  bp_pdata_in_ready;
 
 logic                  need_backpressure;
 
-
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
     prev_pdata <= '0;
@@ -64,10 +59,15 @@ always_ff @( posedge clk_i or posedge rst_i )
     else
       prev_pdata_en <= 1'b0;
 
-assign need_backpressure = ( prev_pdata.bucket == pdata_in_i.bucket ) &&
-                           ( 
-                             ( prev_pdata.cmd.opcode == OP_INSERT ) ||
-                             ( prev_pdata.cmd.opcode == OP_DELETE )
+// FIXME: prev_pdata.cmd.opcode == OP_INIT is wrong here,
+//        need backpreasure in another place
+assign need_backpressure = ( prev_pdata.cmd.opcode == OP_INIT ) ||
+                           (
+                             ( prev_pdata.bucket == pdata_in_i.bucket ) &&
+                             ( 
+                               ( prev_pdata.cmd.opcode == OP_INSERT ) ||
+                               ( prev_pdata.cmd.opcode == OP_DELETE )
+                             ) 
                            );
 always_comb
   begin
@@ -124,37 +124,10 @@ always_ff @( posedge clk_i )
       last_wr_data <= wr_data;
     end
 
-// clear RAM stuff
-logic               clear_ram_flag;
-logic [A_WIDTH-1:0] clear_addr;
-
-always_ff @( posedge clk_i or posedge rst_i )
-  if( rst_i )
-    clear_ram_flag <= 1'b0;
-  else
-    begin
-      if( clear_ram_run_i )
-        clear_ram_flag <= 1'b1;
-
-      if( clear_ram_done_o )
-        clear_ram_flag <= 1'b0;
-    end
-    
-always_ff @( posedge clk_i or posedge rst_i )
-  if( rst_i )
-    clear_addr <= '0;
-  else
-    if( clear_ram_run_i )
-      clear_addr <= '0;
-    else
-      if( clear_ram_flag )
-        clear_addr <= clear_addr + 1'd1;
-
-assign wr_addr          = ( clear_ram_flag ) ? ( clear_addr ) : ( head_table_if.wr_addr         );
-assign wr_data.ptr      = ( clear_ram_flag ) ? ( '0         ) : ( head_table_if.wr_data_ptr     );
-assign wr_data.ptr_val  = ( clear_ram_flag ) ? ( 1'b0       ) : ( head_table_if.wr_data_ptr_val );
-assign wr_en            = ( clear_ram_flag ) ? ( 1'b1       ) : ( head_table_if.wr_en           ); 
-assign clear_ram_done_o = clear_ram_flag && ( clear_addr == '1 );
+assign wr_addr          = head_table_if.wr_addr;
+assign wr_data.ptr      = head_table_if.wr_data_ptr;
+assign wr_data.ptr_val  = head_table_if.wr_data_ptr_val;
+assign wr_en            = head_table_if.wr_en; 
 
 ht_pdata_t pdata_in_d1;
 logic      pdata_in_d1_valid;

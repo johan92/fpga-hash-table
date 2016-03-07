@@ -67,6 +67,8 @@ endfunction
 
 `define CMD( _OP, _KEY, _VALUE ) cmds.push_back( '{ opcode : _OP, key : _KEY, value : _VALUE } ); 
 
+`define CMD_INIT( x )              `CMD( OP_INIT, 0, 0 )
+
 `define CMD_SEARCH( _KEY )         `CMD( OP_SEARCH, _KEY, 0 )
 
 `define CMD_INSERT( _KEY, _VALUE ) `CMD( OP_INSERT, _KEY, _VALUE )
@@ -74,6 +76,18 @@ endfunction
 `define CMD_INSERT_RAND( _KEY )    `CMD_INSERT( _KEY, $urandom() )
 
 `define CMD_DELETE( _KEY )         `CMD( OP_DELETE, _KEY, 0 )
+
+task init_hash_table( );
+  ht_command_t cmds[$];
+  $display("%m:");
+
+  `CMD_INIT( );
+
+  foreach( cmds[i] )
+    begin
+      send_to_dut_c( cmds[i] );
+    end
+endtask
 
 task test_01( );
   ht_command_t cmds[$];
@@ -320,12 +334,24 @@ initial
   begin
     wait( rst_done )
     @( posedge clk );
+
+    init_hash_table( );
+    
     test_01( );
     test_02( );
     test_03( );
     test_04( );
+    
+    init_hash_table( );
+
     test_05( );
+    
+    init_hash_table( );
+    
     test_06( );
+    
+    init_hash_table( );
+    
     test_07( 2**TABLE_ADDR_WIDTH + 10 );
     test_08( 100, 200 );
 
@@ -378,6 +404,8 @@ logic                                  tm_data_table_wr_en;
 logic           [TABLE_ADDR_WIDTH-1:0] tm_data_table_rd_addr;
 logic                                  tm_data_table_rd_en;
 
+logic                                  empty_ptr_srst;
+
 logic           [TABLE_ADDR_WIDTH-1:0] empty_ptr_add_addr;
 logic                                  empty_ptr_add_addr_en;
 
@@ -396,6 +424,7 @@ assign tm_data_table_wr_en           = dut.d_tbl.ram_wr_en;
 assign tm_data_table_rd_addr         = dut.d_tbl.ram_rd_addr;
 assign tm_data_table_rd_en           = dut.d_tbl.ram_rd_en;
 
+assign empty_ptr_srst                = dut.d_tbl.empty_ptr_storage_srst_w;
 assign empty_ptr_add_addr            = dut.d_tbl.add_empty_ptr; 
 assign empty_ptr_add_addr_en         = dut.d_tbl.add_empty_ptr_en;
 assign empty_ptr_del_addr            = dut.d_tbl.empty_addr;
@@ -419,6 +448,7 @@ tables_monitor tm(
   .data_table_rd_addr_i                   ( tm_data_table_rd_addr  ),
   .data_table_rd_en_i                     ( tm_data_table_rd_en    ),
 
+  .empty_ptr_srst_i                       ( empty_ptr_srst         ),
   .empty_ptr_add_addr_i                   ( empty_ptr_add_addr     ),
   .empty_ptr_add_addr_en_i                ( empty_ptr_add_addr_en  ),
 

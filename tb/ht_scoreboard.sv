@@ -62,7 +62,7 @@ class ht_scoreboard;
             end
         end
 
-      OP_INSERT, OP_DELETE:
+      OP_INIT, OP_INSERT, OP_DELETE:
         begin
           if( ref_res.rescode != r.rescode )
             begin
