@@ -25,10 +25,7 @@ module data_table_init #(
   output  [A_WIDTH-1:0]       add_empty_ptr_o,
   output                      add_empty_ptr_en_o,
   
-  // output interface with search result
-  output ht_result_t          result_o,
-  output logic                result_valid_o,
-  input                       result_ready_i
+  ht_res_if.master            ht_res_if
 
 );
 
@@ -82,7 +79,7 @@ always_comb
       DO_REPORT_S:
         begin
           // waiting for report accepted
-          if( result_valid_o && result_ready_i ) 
+          if( ht_res_if.valid && ht_res_if.ready ) 
             next_state = IDLE_S;
         end
 
@@ -150,15 +147,15 @@ assign add_empty_ptr_en_o       = data_table_if.wr_en;
 
 always_comb
   begin
-    result_o         = 'x;
+    ht_res_if.result         = 'x;
 
-    result_o.cmd     = task_locked.cmd;
-    result_o.bucket  = 'x; // for OP_INIT bucket have no meaning
+    ht_res_if.result.cmd     = task_locked.cmd;
+    ht_res_if.result.bucket  = 'x; // for OP_INIT bucket have no meaning
 
-    result_o.rescode = INIT_SUCCESS; // always success init ^_^
+    ht_res_if.result.rescode = INIT_SUCCESS; // always success init ^_^
   end
 
-assign result_valid_o = ( state == DO_REPORT_S );
+assign ht_res_if.valid = ( state == DO_REPORT_S );
 
 // synthesis translate_off
 
@@ -183,8 +180,8 @@ always_ff @( posedge clk_i )
     if( data_table_if.wr_en )
       print_ram_data( "WR", data_table_if.wr_addr, data_table_if.wr_data );
 
-    if( result_valid_o && result_ready_i )
-      print_result( "RES", result_o );
+    if( ht_res_if.valid && ht_res_if.ready )
+      print_result( "RES", ht_res_if.result );
 
     print_state_transition( );
   end

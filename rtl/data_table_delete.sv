@@ -63,11 +63,8 @@ module data_table_delete #(
   output                      add_empty_ptr_en_o,
 
   head_table_if.master        head_table_if,
-
-  // output interface with search result
-  output ht_result_t          result_o,
-  output logic                result_valid_o,
-  input                       result_ready_i
+  
+  ht_res_if.master            ht_res_if
 );
 
 enum int unsigned {
@@ -174,7 +171,7 @@ always_comb
       CLEAR_RAM_AND_PTR_S, NO_VALID_HEAD_PTR_S, IN_TAIL_WITHOUT_MATCH_S:
         begin
           // waiting for accepting report 
-          if( result_valid_o && result_ready_i )
+          if( ht_res_if.valid && ht_res_if.ready )
             next_state = IDLE_S;
         end
 
@@ -237,13 +234,13 @@ always_ff @( posedge clk_i or posedge rst_i )
 assign task_ready_o = ( state == IDLE_S );
 
 assign data_table_if.rd_en      = ( state_first_tick || rd_data_val_d1 ) && ( ( state == READ_HEAD_S   ) || 
-                                                                  ( state == GO_ON_CHAIN_S ) );   
+                                                                              ( state == GO_ON_CHAIN_S ) );   
 
 assign data_table_if.rd_addr    = rd_addr; 
 
 assign data_table_if.wr_en      = state_first_tick && ( ( state == KEY_MATCH_IN_MIDDLE_S  ) ||
-                                            ( state == KEY_MATCH_IN_TAIL_S    ) || 
-                                            ( state == CLEAR_RAM_AND_PTR_S    ) );
+                                                        ( state == KEY_MATCH_IN_TAIL_S    ) || 
+                                                        ( state == CLEAR_RAM_AND_PTR_S    ) );
 
 ram_data_t rd_data_locked;
 
@@ -302,12 +299,12 @@ assign add_empty_ptr_o     = rd_addr;
 assign add_empty_ptr_en_o  = state_first_tick && ( state == CLEAR_RAM_AND_PTR_S );
 
 // ******* Result calculation *******
-assign result_o.cmd         = task_locked.cmd;
-assign result_o.bucket      = task_locked.bucket;
-assign result_o.found_value = '0;
-assign result_o.rescode     = ( ( state == NO_VALID_HEAD_PTR_S     ) ||
-                                ( state == IN_TAIL_WITHOUT_MATCH_S ) ) ? ( DELETE_NOT_SUCCESS_NO_ENTRY ):
-                                                                         ( DELETE_SUCCESS              );
+assign ht_res_if.result.cmd         = task_locked.cmd;
+assign ht_res_if.result.bucket      = task_locked.bucket;
+assign ht_res_if.result.found_value = '0;
+assign ht_res_if.result.rescode     = ( ( state == NO_VALID_HEAD_PTR_S     ) ||
+                                        ( state == IN_TAIL_WITHOUT_MATCH_S ) ) ? ( DELETE_NOT_SUCCESS_NO_ENTRY ):
+                                                                                 ( DELETE_SUCCESS              );
 
 ht_chain_state_t chain_state;
 
@@ -327,11 +324,11 @@ always_ff @( posedge clk_i or posedge rst_i )
         endcase
       end
 
-assign result_o.chain_state = chain_state; 
+assign ht_res_if.result.chain_state = chain_state; 
 
-assign result_valid_o = ( state == CLEAR_RAM_AND_PTR_S      ) ||
-                        ( state == NO_VALID_HEAD_PTR_S      ) ||
-                        ( state == IN_TAIL_WITHOUT_MATCH_S  );
+assign ht_res_if.valid = ( state == CLEAR_RAM_AND_PTR_S      ) ||
+                         ( state == NO_VALID_HEAD_PTR_S      ) ||
+                         ( state == IN_TAIL_WITHOUT_MATCH_S  );
 
 
 
@@ -367,8 +364,8 @@ always_ff @( posedge clk_i )
     if( data_table_if.wr_en )
       print_ram_data( "WR", data_table_if.wr_addr, data_table_if.wr_data );
     
-    if( result_valid_o && result_ready_i )
-      print_result( "RES", result_o );
+    if( ht_res_if.valid && ht_res_if.ready )
+      print_result( "RES", ht_res_if.result );
 
     print_state_transition( );
   end

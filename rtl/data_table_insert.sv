@@ -62,9 +62,7 @@ module data_table_insert #(
   head_table_if.master        head_table_if,
 
   // output interface with search result
-  output ht_result_t          result_o,
-  output logic                result_valid_o,
-  input                       result_ready_i
+  ht_res_if.master            ht_res_if
 );
 
 enum int unsigned {
@@ -169,7 +167,7 @@ always_comb
 
       KEY_MATCH_S, NO_EMPTY_ADDR_S, NO_HEAD_PTR_WR_DATA_S, ON_TAIL_UPD_NEXT_PTR_S: 
         begin
-          if( result_valid_o && result_ready_i )
+          if( ht_res_if.valid && ht_res_if.ready )
             begin
               next_state = IDLE_S;
             end
@@ -298,21 +296,21 @@ always_ff @( posedge clk_i or posedge rst_i )
 
 always_comb
   begin
-    result_o.cmd         = task_locked.cmd;
-    result_o.bucket      = task_locked.bucket;
-    result_o.found_value = '0;
-    result_o.chain_state = chain_state;
+    ht_res_if.result.cmd         = task_locked.cmd;
+    ht_res_if.result.bucket      = task_locked.bucket;
+    ht_res_if.result.found_value = '0;
+    ht_res_if.result.chain_state = chain_state;
 
     case( state )
-      KEY_MATCH_S:     result_o.rescode = INSERT_SUCCESS_SAME_KEY;
-      NO_EMPTY_ADDR_S: result_o.rescode = INSERT_NOT_SUCCESS_TABLE_IS_FULL;
-      default:         result_o.rescode = INSERT_SUCCESS;
+      KEY_MATCH_S:     ht_res_if.result.rescode = INSERT_SUCCESS_SAME_KEY;
+      NO_EMPTY_ADDR_S: ht_res_if.result.rescode = INSERT_NOT_SUCCESS_TABLE_IS_FULL;
+      default:         ht_res_if.result.rescode = INSERT_SUCCESS;
     endcase
   end
 
 
 
-assign result_valid_o = ( state == KEY_MATCH_S            ) ||
+assign ht_res_if.valid = ( state == KEY_MATCH_S            ) ||
                         ( state == NO_EMPTY_ADDR_S        ) ||
                         ( state == NO_HEAD_PTR_WR_DATA_S  ) ||
                         ( state == ON_TAIL_UPD_NEXT_PTR_S );
@@ -350,8 +348,8 @@ always_ff @( posedge clk_i )
     if( data_table_if.wr_en )
       print_ram_data( "WR", data_table_if.wr_addr, data_table_if.wr_data );
     
-    if( result_valid_o && result_ready_i )
-      print_result( "RES", result_o );
+    if( ht_res_if.valid && ht_res_if.ready )
+      print_result( "RES", ht_res_if.result );
 
     print_state_transition( );
   end

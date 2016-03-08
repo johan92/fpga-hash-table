@@ -93,10 +93,7 @@ data_table_init init_eng(
   .add_empty_ptr_o                        ( init_add_empty_ptr       ),
   .add_empty_ptr_en_o                     ( init_add_empty_ptr_en    ),
     
-    // output interface with search result
-  .result_o                               ( ht_eng_res[INIT_].result ),
-  .result_valid_o                         ( ht_eng_res[INIT_].valid  ),
-  .result_ready_i                         ( ht_eng_res[INIT_].ready  )
+  .ht_res_if                               ( ht_eng_res[INIT_]       )
 
 );
 
@@ -109,16 +106,14 @@ data_table_search_wrapper #(
   .rst_i                                  ( rst_i                      ),
     
   .task_i                                 ( task_w                     ),
-  .task_valid_i                           ( task_valid       [SEARCH_]  ),
-  .task_ready_o                           ( task_ready       [SEARCH_]  ),
+  .task_valid_i                           ( task_valid       [SEARCH_] ),
+  .task_ready_o                           ( task_ready       [SEARCH_] ),
 
   .task_in_proccess_o                     ( search_task_in_proccess    ),
   
   .data_table_if                          ( data_table_if[SEARCH_]     ),
 
-  .result_o                               ( ht_eng_res[SEARCH_].result ),
-  .result_valid_o                         ( ht_eng_res[SEARCH_].valid  ),
-  .result_ready_i                         ( ht_eng_res[SEARCH_].ready  )
+  .ht_res_if                              ( ht_eng_res[SEARCH_]        )
 );
 
 data_table_insert #(
@@ -134,16 +129,13 @@ data_table_insert #(
   .data_table_if                          ( data_table_if    [INSERT_]  ),
     
     // to empty pointer storage
-  .empty_addr_i                           ( empty_addr        ),
-  .empty_addr_val_i                       ( empty_addr_val    ),
-  .empty_addr_rd_ack_o                    ( empty_addr_rd_ack ),
+  .empty_addr_i                           ( empty_addr                  ),
+  .empty_addr_val_i                       ( empty_addr_val              ),
+  .empty_addr_rd_ack_o                    ( empty_addr_rd_ack           ),
 
-  .head_table_if                          ( head_table_insert_if         ),
+  .head_table_if                          ( head_table_insert_if        ),
 
-    // output interface with result
-  .result_o                               ( ht_eng_res[INSERT_].result ),
-  .result_valid_o                         ( ht_eng_res[INSERT_].valid  ),
-  .result_ready_i                         ( ht_eng_res[INSERT_].ready  )
+  .ht_res_if                              ( ht_eng_res[INSERT_]         )
 );
 
 data_table_delete #(
@@ -165,10 +157,7 @@ data_table_delete #(
 
   .head_table_if                          ( head_table_delete_if            ),
 
-    // output interface with search result
-  .result_o                               ( ht_eng_res[DELETE_].result ),
-  .result_valid_o                         ( ht_eng_res[DELETE_].valid  ),
-  .result_ready_i                         ( ht_eng_res[DELETE_].ready  )
+  .ht_res_if                              ( ht_eng_res[DELETE_]             )
 );
 
 assign task_w = pdata_in_i;
@@ -289,7 +278,7 @@ always_comb
 // ******* Muxing cmd result *******
 
 ht_res_mux #(
-  .DIR_CNT            ( DIR_CNT )
+  .DIR_CNT                                ( DIR_CNT           )
 ) res_mux (
 
   .ht_res_in                              ( ht_eng_res        ),

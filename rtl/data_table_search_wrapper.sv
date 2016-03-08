@@ -28,9 +28,7 @@ module data_table_search_wrapper #(
   data_table_if.master        data_table_if,
   
   // output interface with search result
-  output ht_result_t          result_o,
-  output logic                result_valid_o,
-  input                       result_ready_i
+  ht_res_if.master            ht_res_if
 
 );
 localparam ENGINES_CNT_WIDTH = $clog2( ENGINES_CNT );
@@ -158,7 +156,7 @@ always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
     res_collector_num <= '0;
   else
-    if( result_ready_i && result_valid_o )
+    if( ht_res_if.ready && ht_res_if.valid )
       begin
         if( res_collector_num == ( ENGINES_CNT - 1 ) )
           res_collector_num <= '0;
@@ -166,14 +164,14 @@ always_ff @( posedge clk_i or posedge rst_i )
           res_collector_num <= res_collector_num + 1'd1;
       end
 
-assign result_o       = result[ res_collector_num ];
-assign result_valid_o = result_valid[ res_collector_num ];
+assign ht_res_if.result  = result[ res_collector_num ];
+assign ht_res_if.valid   = result_valid[ res_collector_num ];
 
 always_comb
   begin
     for( int i = 0; i < ENGINES_CNT; i++ )
       begin
-        result_ready[i] = ( i == res_collector_num ) ? ( result_ready_i ) : ( 1'b0 );
+        result_ready[i] = ( i == res_collector_num ) ? ( ht_res_if.ready ) : ( 1'b0 );
       end
   end
 
