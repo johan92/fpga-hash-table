@@ -357,7 +357,7 @@ initial
    
     wait_end_of_tests( );
 
-    env.scb.show_stat( );
+    env.post_test( );
 
     $stop();
   end

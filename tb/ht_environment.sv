@@ -49,6 +49,19 @@ class ht_environment;
     join
   endtask
 
+  function post_test( );
+    bit passed = 1'b1;
+
+    scb.show_stat( );
+    scb_inner.show_stat( );
+
+    passed &= scb.test_passed( );
+    passed &= scb_inner.test_passed( );
+    
+    $display( " " );
+    $display( "%m: VERIFICATION: %s", passed ? ( "PASSSED" ) : ( "FAILED" ) );
+  endfunction 
+
   // return 1 if all mailboxs is empty
   // otherwize 0
   function bit mailboxs_is_empty( );

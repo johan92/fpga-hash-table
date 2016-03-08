@@ -20,9 +20,27 @@ class ht_scoreboard;
   
   ref_hash_table            ref_ht;
   
-  int stat_in_opcode       [ OPCODE_CNT  - 1 : 0 ];
-  int stat_out_opcode      [ OPCODE_CNT  - 1 : 0 ];
-  int stat_rescode         [ RESCODE_CNT - 1 : 0 ];
+  typedef enum int unsigned {
+    COMMAND_LOST_REORDER,
+    
+    // ref and dut results not match
+    OP_INIT_NOT_MATCH,
+    OP_SEARCH_NOT_MATCH,
+    OP_INSERT_NOT_MATCH,
+    OP_DELETE_NOT_MATCH,
+
+    UNKNOWN_OPCODE,
+
+    // "fake" constant
+    ERR_STAT_CNT
+  } stat_err_t;
+  
+  int stat_in_opcode       [ OPCODE_CNT   - 1 : 0 ];
+  int stat_out_opcode      [ OPCODE_CNT   - 1 : 0 ];
+  int stat_rescode         [ RESCODE_CNT  - 1 : 0 ];
+  int stats_err            [ ERR_STAT_CNT - 1 : 0 ];
+
+  `define INC_ERR_STATS( x ) stats_err[ x ] += 1;
 
   function new( input mailbox #( ht_command_t ) _drv2scb,
                       mailbox #( ht_result_t  ) _mon2scb );
@@ -56,6 +74,7 @@ class ht_scoreboard;
   endfunction
 
   function void show_stat( );
+    $display("%m:");
 
     $display( "| %-35s | %10s | %10s |", "OPCODE", "IN", "OUT" );
 
@@ -73,13 +92,33 @@ class ht_scoreboard;
         $display("| %-35s | %10d |", ht_rescode_t'(i), stat_rescode[i] );
       end
 
+    $display( " " );
+    for( int i = 0; i < ERR_STAT_CNT; i++ )
+      begin
+        $display("| ERR_%-31s | %10d |", stat_err_t'(i), stats_err[i] );
+      end
+
   endfunction
+
+  // return 1, if no error happend
+  function bit test_passed( );
+    bit rez = 1'b1;
+
+    for( int i = 0; i < ERR_STAT_CNT; i++ )
+      begin
+        if( stats_err[i] > 0 )
+          rez = 1'b0;
+      end
+
+    return rez;
+  endfunction 
 
   function void check( input ht_command_t c, ht_result_t r );
     ht_result_t ref_res;
     
     if( r.cmd != c )
       begin
+        `INC_ERR_STATS( COMMAND_LOST_REORDER ) 
         $error("DUT command in result don't match (maybe lost some command or reordering...?)");
         return;
       end
@@ -92,6 +131,7 @@ class ht_scoreboard;
           if( ( ref_res.rescode     != r.rescode     ) || 
               ( ref_res.found_value != r.found_value ) )
             begin
+              `INC_ERR_STATS( OP_SEARCH_NOT_MATCH )
               $error("Did not in %s: key = 0x%x REF: %s found = 0x%x, DUT: %s found = 0x%x", c.opcode, c.key, ref_res.rescode, ref_res.found_value, r.rescode, r.found_value );
             end
         end
@@ -100,8 +140,21 @@ class ht_scoreboard;
         begin
           if( ref_res.rescode != r.rescode )
             begin
+              case( c.opcode )
+                OP_INIT   :  `INC_ERR_STATS ( OP_INIT_NOT_MATCH   )
+                OP_INSERT :  `INC_ERR_STATS ( OP_INSERT_NOT_MATCH )
+                OP_DELETE :  `INC_ERR_STATS ( OP_DELETE_NOT_MATCH )
+              endcase
+
               $error("Did not in %s REF: %s, DUT: %s", c.opcode, ref_res.rescode, r.rescode );
             end
+        end
+
+      default:
+        begin
+          `INC_ERR_STATS( UNKNOWN_OPCODE )
+
+          $error( "Unknown opcode [%s]!", c.opcode );
         end
     endcase
 

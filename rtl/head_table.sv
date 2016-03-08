@@ -172,9 +172,7 @@ assign pdata_in_d1_ready = pdata_out_ready_i;
 
 
 // synthesis translate_off
-function void print( string msg );
-  $display("%08t: %m: %s", $time, msg);
-endfunction
+`include "../tb/ht_dbg.vh"
 
 function void print_wr_head_table( );
   string msg;
