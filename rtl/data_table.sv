@@ -43,10 +43,10 @@ logic                     delete_add_empty_ptr_en;
 logic       [A_WIDTH-1:0] add_empty_ptr;
 logic                     add_empty_ptr_en;
 
-ht_pdata_t           task_w;
+ht_pdata_t           task_data        [DIR_CNT-1:0];
 logic                task_valid       [DIR_CNT-1:0];
 logic                task_ready       [DIR_CNT-1:0];
-logic                task_proccessing [DIR_CNT-1:0];
+logic                task_processing  [DIR_CNT-1:0];
 
 logic                search_task_in_proccess;
 
@@ -72,7 +72,7 @@ data_table_init init_eng(
   .clk_i                                  ( clk_i                    ),
   .rst_i                                  ( rst_i                    ),
 
-  .task_i                                 ( task_w                   ),
+  .task_i                                 ( task_data  [INIT_]       ),
   .task_valid_i                           ( task_valid [INIT_]       ),
   .task_ready_o                           ( task_ready [INIT_]       ),
   
@@ -85,7 +85,7 @@ data_table_init init_eng(
   .add_empty_ptr_o                        ( init_add_empty_ptr       ),
   .add_empty_ptr_en_o                     ( init_add_empty_ptr_en    ),
     
-  .ht_res_if                               ( ht_eng_res[INIT_]       )
+  .ht_res_if                              ( ht_eng_res[INIT_]        )
 
 );
 
@@ -97,7 +97,7 @@ data_table_search_wrapper #(
   .clk_i                                  ( clk_i                      ),
   .rst_i                                  ( rst_i                      ),
     
-  .task_i                                 ( task_w                     ),
+  .task_i                                 ( task_data        [SEARCH_] ),
   .task_valid_i                           ( task_valid       [SEARCH_] ),
   .task_ready_o                           ( task_ready       [SEARCH_] ),
 
@@ -116,7 +116,7 @@ data_table_insert #(
   .clk_i                                  ( clk_i                       ),
   .rst_i                                  ( rst_i                       ),
     
-  .task_i                                 ( task_w                      ),
+  .task_i                                 ( task_data        [INSERT_]  ),
   .task_valid_i                           ( task_valid       [INSERT_]  ),
   .task_ready_o                           ( task_ready       [INSERT_]  ),
 
@@ -138,7 +138,7 @@ data_table_delete #(
   .clk_i                                  ( clk_i                           ),
   .rst_i                                  ( rst_i                           ),
     
-  .task_i                                 ( task_w                          ),
+  .task_i                                 ( task_data        [DELETE_]      ),
   .task_valid_i                           ( task_valid       [DELETE_]      ),
   .task_ready_o                           ( task_ready       [DELETE_]      ),
 
@@ -154,81 +154,24 @@ data_table_delete #(
   .ht_res_if                              ( ht_eng_res[DELETE_]             )
 );
 
-assign task_w = pdata_in_i;
+assign task_processing[ INIT_   ] = !task_ready[ INIT_   ];
+assign task_processing[ SEARCH_ ] = search_task_in_proccess;
+assign task_processing[ INSERT_ ] = !task_ready[ INSERT_ ];
+assign task_processing[ DELETE_ ] = !task_ready[ DELETE_ ];
 
-assign task_proccessing[ INIT_   ] = !task_ready[ INIT_   ];
-assign task_proccessing[ SEARCH_ ] = search_task_in_proccess;
-assign task_proccessing[ INSERT_ ] = !task_ready[ INSERT_ ];
-assign task_proccessing[ DELETE_ ] = !task_ready[ DELETE_ ];
+ht_task_demux #(
+  .DIR_CNT                                ( DIR_CNT           )
+) ht_task_demux (
+  .pdata_in_i                             ( pdata_in_i        ),
+  .pdata_in_valid_i                       ( pdata_in_valid_i  ),
+  .pdata_in_ready_o                       ( pdata_in_ready_o  ),
 
-always_comb
-  begin
-    pdata_in_ready_o = 1'b1;
-    
-    task_valid[ INIT_   ] = pdata_in_valid_i && ( task_w.cmd.opcode == OP_INIT   );
-    task_valid[ SEARCH_ ] = pdata_in_valid_i && ( task_w.cmd.opcode == OP_SEARCH );
-    task_valid[ INSERT_ ] = pdata_in_valid_i && ( task_w.cmd.opcode == OP_INSERT );
-    task_valid[ DELETE_ ] = pdata_in_valid_i && ( task_w.cmd.opcode == OP_DELETE );
-    
-    case( task_w.cmd.opcode )
-      OP_INIT:
-        begin
-          if( task_proccessing[ SEARCH_ ] || task_proccessing[ INSERT_ ] || 
-              task_proccessing[ DELETE_ ] )
-              begin
-                pdata_in_ready_o    = 1'b0;
-                task_valid[ INIT_ ] = 1'b0;
-              end
-          else
-            begin
-              pdata_in_ready_o = task_ready[ INIT_ ];
-            end
-        end
+  .task_ready_i                           ( task_ready        ),
+  .task_processing_i                      ( task_processing   ),
+  .task_data_o                            ( task_data         ),
+  .task_valid_o                           ( task_valid        )
 
-      OP_SEARCH:
-        begin
-          if( task_proccessing[ INIT_   ] || task_proccessing[ INSERT_ ] || 
-              task_proccessing[ DELETE_ ] )
-            begin
-              pdata_in_ready_o      = 1'b0;
-              task_valid[ SEARCH_ ] = 1'b0;
-            end
-          else
-            begin
-              pdata_in_ready_o = task_ready[ SEARCH_ ];
-            end
-        end
-
-      OP_INSERT:
-        begin
-          if( task_proccessing[ INIT_   ] || task_proccessing[ SEARCH_ ] || 
-              task_proccessing[ DELETE_ ] )
-            begin
-              pdata_in_ready_o      = 1'b0;
-              task_valid[ INSERT_ ] = 1'b0;
-            end
-          else
-            pdata_in_ready_o = task_ready[ INSERT_ ];
-        end
-
-      OP_DELETE:
-        begin
-          if( task_proccessing[ INIT_   ] || task_proccessing[ SEARCH_ ] || 
-              task_proccessing[ INSERT_ ] )
-            begin
-              pdata_in_ready_o      = 1'b0;
-              task_valid[ DELETE_ ] = 1'b0;
-            end
-          else
-            pdata_in_ready_o = task_ready[ DELETE_ ];
-        end
-
-      default: 
-        begin
-          pdata_in_ready_o = 1'b1;
-        end
-    endcase
-  end
+);
 
 
 // ******* MUX to RAM *******
@@ -261,6 +204,7 @@ ht_res_mux #(
   .ht_res_out                             ( ht_res_out        )
 
 );
+
 // ******* Empty ptr store *******
 
 always_comb
