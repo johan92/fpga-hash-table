@@ -20,6 +20,8 @@ package hash_table;
     OP_DELETE
   } ht_opcode_t;
 
+  parameter OPCODE_CNT = OP_DELETE + 1;
+
   typedef enum int unsigned {
     INIT_SUCCESS,
 
@@ -33,6 +35,8 @@ package hash_table;
     DELETE_SUCCESS,
     DELETE_NOT_SUCCESS_NO_ENTRY
   } ht_rescode_t;
+
+  parameter RESCODE_CNT = DELETE_NOT_SUCCESS_NO_ENTRY + 1;
   
   typedef enum int unsigned {
     READ_NO_HEAD,

@@ -77,7 +77,7 @@ endfunction
 
 `define CMD_DELETE( _KEY )         `CMD( OP_DELETE, _KEY, 0 )
 
-task init_hash_table( );
+task automatic init_hash_table( );
   ht_command_t cmds[$];
   $display("%m:");
 
@@ -89,7 +89,7 @@ task init_hash_table( );
     end
 endtask
 
-task test_01( );
+task automatic test_01( );
   ht_command_t cmds[$];
   $display("%m:");
   
@@ -113,7 +113,7 @@ task test_01( );
     end
 endtask
 
-task test_02( );
+task automatic test_02( );
   ht_command_t cmds[$];
   
   $display("%m:");
@@ -139,7 +139,7 @@ task test_02( );
     end
 endtask
 
-task test_03( );
+task automatic test_03( );
   ht_command_t cmds[$];
   
   $display("%m:");
@@ -202,7 +202,7 @@ task test_03( );
 
 endtask
 
-task test_04( );
+task automatic test_04( );
   ht_command_t cmds[$];
   
   $display("%m:");
@@ -222,7 +222,7 @@ task test_04( );
 endtask 
 
 // testing small amount of buckets with random commands
-task test_05( );
+task automatic test_05( );
   ht_command_t cmds[$];
   
   $display("%m:");
@@ -244,7 +244,7 @@ task test_05( );
 endtask
 
 // testing only one bucket with random commands
-task test_06( );
+task automatic test_06( );
   ht_command_t cmds[$];
   
   $display("%m:");
@@ -266,7 +266,7 @@ task test_06( );
 endtask
 
 // just inserting a lot data 
-task test_07( input int insert_cmd_cnt );
+task automatic test_07( input int insert_cmd_cnt );
   ht_command_t cmds[$];
   
   $display("%m:");
@@ -282,8 +282,8 @@ task test_07( input int insert_cmd_cnt );
     end
 endtask
 
-task test_08( input int search_cmd_cnt, 
-              input int delete_cmd_cnt );
+task automatic test_08( input int search_cmd_cnt, 
+                        input int delete_cmd_cnt );
 
   ht_command_t cmds[$];
   bit [KEY_WIDTH-1:0] existing_key;
@@ -354,8 +354,10 @@ initial
     
     test_07( 2**TABLE_ADDR_WIDTH + 10 );
     test_08( 100, 200 );
-
+   
     wait_end_of_tests( );
+
+    env.scb.show_stat( );
 
     $stop();
   end
