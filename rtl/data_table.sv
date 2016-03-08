@@ -29,24 +29,6 @@ localparam INSERT_ = 2;
 localparam DELETE_ = 3;
 
 localparam DIR_CNT = 4; 
-localparam DIR_CNT_WIDTH = $clog2( DIR_CNT );
-
-ram_data_t                ram_rd_data;
-
-logic      [A_WIDTH-1:0]  ram_rd_addr;
-logic                     ram_rd_en;
-
-logic      [A_WIDTH-1:0]  ram_wr_addr;
-ram_data_t                ram_wr_data;
-logic                     ram_wr_en;
-
-logic       [A_WIDTH-1:0] rd_addr_w [DIR_CNT-1:0];
-logic                     rd_en_w   [DIR_CNT-1:0];
-
-logic       [A_WIDTH-1:0] wr_addr_w [DIR_CNT-1:0];
-ram_data_t                wr_data_w [DIR_CNT-1:0];
-logic                     wr_en_w   [DIR_CNT-1:0];
-
 
 logic       [A_WIDTH-1:0] empty_addr;
 logic                     empty_addr_val;
@@ -72,6 +54,14 @@ ht_res_if ht_eng_res[DIR_CNT-1:0](
   .clk ( clk_i )
 );
 
+data_table_if data_table_if[DIR_CNT-1:0](
+  .clk ( clk_i )
+);
+
+data_table_if data_table_ram_if(
+  .clk ( clk_i )
+);
+
 head_table_if head_table_init_if( 
   .clk( clk_i )
 );
@@ -93,10 +83,8 @@ data_table_init init_eng(
   .task_i                                 ( task_w                   ),
   .task_valid_i                           ( task_valid [INIT_]       ),
   .task_ready_o                           ( task_ready [INIT_]       ),
-    
-  .wr_addr_o                              ( wr_addr_w [INIT_]        ),
-  .wr_data_o                              ( wr_data_w [INIT_]        ),
-  .wr_en_o                                ( wr_en_w   [INIT_]        ),
+  
+  .data_table_if                          ( data_table_if[INIT_]     ),
     
   .head_table_if                          ( head_table_init_if       ),
 
@@ -112,9 +100,6 @@ data_table_init init_eng(
 
 );
 
-assign rd_addr_w [ INIT_ ] = '0;
-assign rd_en_w   [ INIT_ ] = 1'b0;
-
 data_table_search_wrapper #( 
   .ENGINES_CNT                            ( 5                          ),
   .RAM_LATENCY                            ( RAM_LATENCY                )
@@ -128,20 +113,13 @@ data_table_search_wrapper #(
   .task_ready_o                           ( task_ready       [SEARCH_]  ),
 
   .task_in_proccess_o                     ( search_task_in_proccess    ),
-
-  .rd_data_i                              ( ram_rd_data                ),
-  .rd_addr_o                              ( rd_addr_w        [SEARCH_]  ),
-  .rd_en_o                                ( rd_en_w          [SEARCH_]  ),
+  
+  .data_table_if                          ( data_table_if[SEARCH_]     ),
 
   .result_o                               ( ht_eng_res[SEARCH_].result ),
   .result_valid_o                         ( ht_eng_res[SEARCH_].valid  ),
   .result_ready_i                         ( ht_eng_res[SEARCH_].ready  )
 );
-
-// for search no need in write interface to RAM
-assign wr_addr_w[SEARCH_] = '0;
-assign wr_data_w[SEARCH_] = '0;
-assign wr_en_w  [SEARCH_] = 1'b0;
 
 data_table_insert #(
   .RAM_LATENCY                            ( RAM_LATENCY                 )
@@ -152,15 +130,8 @@ data_table_insert #(
   .task_i                                 ( task_w                      ),
   .task_valid_i                           ( task_valid       [INSERT_]  ),
   .task_ready_o                           ( task_ready       [INSERT_]  ),
-    
-    // to data RAM
-  .rd_data_i                              ( ram_rd_data                 ),
-  .rd_addr_o                              ( rd_addr_w        [INSERT_]  ),
-  .rd_en_o                                ( rd_en_w          [INSERT_]  ),
 
-  .wr_addr_o                              ( wr_addr_w        [INSERT_]  ),
-  .wr_data_o                              ( wr_data_w        [INSERT_]  ),
-  .wr_en_o                                ( wr_en_w          [INSERT_]  ),
+  .data_table_if                          ( data_table_if    [INSERT_]  ),
     
     // to empty pointer storage
   .empty_addr_i                           ( empty_addr        ),
@@ -185,14 +156,8 @@ data_table_delete #(
   .task_valid_i                           ( task_valid       [DELETE_]      ),
   .task_ready_o                           ( task_ready       [DELETE_]      ),
 
-    // to data RAM                                            
-  .rd_data_i                              ( ram_rd_data                     ),
-  .rd_addr_o                              ( rd_addr_w        [DELETE_]      ),
-  .rd_en_o                                ( rd_en_w          [DELETE_]      ),
-  
-  .wr_addr_o                              ( wr_addr_w        [DELETE_]      ),
-  .wr_data_o                              ( wr_data_w        [DELETE_]      ),
-  .wr_en_o                                ( wr_en_w          [DELETE_]      ),
+    // to data RAM                                           
+  .data_table_if                          ( data_table_if    [DELETE_]      ),
     
     // to empty pointer storage
   .add_empty_ptr_o                        ( delete_add_empty_ptr            ),
@@ -284,37 +249,15 @@ always_comb
 
 
 // ******* MUX to RAM *******
-logic [DIR_CNT_WIDTH-1:0] rd_sel;
-logic [DIR_CNT_WIDTH-1:0] wr_sel;
 
-always_comb
-  begin
-    rd_sel = '0;
+data_table_if_mux #(
+  .DIR_CNT                                ( DIR_CNT           )
+) data_table_mux (
 
-    for( int i = 0; i < DIR_CNT; i++ )
-      begin
-        if( rd_en_w[i] )
-          rd_sel = i[DIR_CNT_WIDTH-1:0];
-      end
-  end
+  .dt_in_if                               ( data_table_if     ),
+  .dt_out_if                              ( data_table_ram_if )
 
-always_comb
-  begin
-    wr_sel = '0;
-
-    for( int i = 0; i < DIR_CNT; i++ )
-      begin
-        if( wr_en_w[i] )
-          wr_sel = i[DIR_CNT_WIDTH-1:0];
-      end
-  end
-
-assign ram_rd_addr = rd_addr_w [ rd_sel ];
-assign ram_rd_en   = rd_en_w   [ rd_sel ];
-
-assign ram_wr_addr = wr_addr_w [ wr_sel ];
-assign ram_wr_data = wr_data_w [ wr_sel ];
-assign ram_wr_en   = wr_en_w   [ wr_sel ];  
+);
 
 // ******* MUX to head_table *******
 always_comb
@@ -389,23 +332,23 @@ empty_ptr_storage #(
 );
 
 true_dual_port_ram_single_clock #( 
-  .DATA_WIDTH                             ( D_WIDTH           ), 
-  .ADDR_WIDTH                             ( A_WIDTH           ), 
-  .REGISTER_OUT                           ( 1                 )
+  .DATA_WIDTH                             ( D_WIDTH                   ), 
+  .ADDR_WIDTH                             ( A_WIDTH                   ), 
+  .REGISTER_OUT                           ( 1                         )
 ) data_ram (
-  .clk                                    ( clk_i             ),
+  .clk                                    ( clk_i                     ),
 
-  .addr_a                                 ( ram_rd_addr       ),
-  .data_a                                 ( {D_WIDTH{1'b0}}   ),
-  .we_a                                   ( 1'b0              ),
-  .re_a                                   ( 1'b1              ),
-  .q_a                                    ( ram_rd_data       ),
+  .addr_a                                 ( data_table_ram_if.rd_addr ),
+  .data_a                                 ( {D_WIDTH{1'b0}}           ),
+  .we_a                                   ( 1'b0                      ),
+  .re_a                                   ( 1'b1                      ),
+  .q_a                                    ( data_table_ram_if.rd_data ),
 
-  .addr_b                                 ( ram_wr_addr       ),
-  .data_b                                 ( ram_wr_data       ),
-  .we_b                                   ( ram_wr_en         ),
-  .re_b                                   ( 1'b0              ),
-  .q_b                                    (                   )
+  .addr_b                                 ( data_table_ram_if.wr_addr ),
+  .data_b                                 ( data_table_ram_if.wr_data ),
+  .we_b                                   ( data_table_ram_if.wr_en   ),
+  .re_b                                   ( 1'b0                      ),
+  .q_b                                    (                           )
 );
 
 

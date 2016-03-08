@@ -16,10 +16,8 @@ module data_table_init #(
   input                       task_valid_i,
   output                      task_ready_o,
   
-  output logic [A_WIDTH-1:0]  wr_addr_o,
-  output ram_data_t           wr_data_o,
-  output logic                wr_en_o,
-  
+  data_table_if.master        data_table_if,
+
   head_table_if.master        head_table_if,
   
   // to empty pointer storage
@@ -130,7 +128,7 @@ always_ff @( posedge clk_i or posedge rst_i )
     if( state != INIT_RAMS_S )
       data_table_init_done <= 1'b0;
     else
-      if( ( state == INIT_RAMS_S ) && ( wr_addr_o == '1 ) && wr_en_o )
+      if( ( state == INIT_RAMS_S ) && ( data_table_if.wr_addr == '1 ) && data_table_if.wr_en )
         data_table_init_done <= 1'b1;
 
 assign head_table_if.wr_addr         = cnt_addr[BUCKET_WIDTH-1:0];
@@ -138,13 +136,16 @@ assign head_table_if.wr_data_ptr     = '0;
 assign head_table_if.wr_data_ptr_val = 1'b0;
 assign head_table_if.wr_en           = ( state == INIT_RAMS_S ) && ( head_table_init_done == 1'b0 ); 
 
-assign wr_addr_o = cnt_addr[A_WIDTH-1:0]; 
-assign wr_data_o = '0;
-assign wr_en_o   = ( state == INIT_RAMS_S ) && ( data_table_init_done == 1'b0 );
+assign data_table_if.wr_addr = cnt_addr[A_WIDTH-1:0]; 
+assign data_table_if.wr_data = '0;
+assign data_table_if.wr_en   = ( state == INIT_RAMS_S ) && ( data_table_init_done == 1'b0 );
+// no read need here
+assign data_table_if.rd_en     = 1'b0;
+assign data_table_if.rd_addr   = 'x;
 
 assign empty_ptr_storage_srst_o = ( state == RESET_EMPTY_PTR_STORAGE_S );
-assign add_empty_ptr_o          = wr_addr_o;
-assign add_empty_ptr_en_o       = wr_en_o;
+assign add_empty_ptr_o          = data_table_if.wr_addr;
+assign add_empty_ptr_en_o       = data_table_if.wr_en;
 
 
 always_comb
@@ -179,8 +180,8 @@ always_ff @( posedge clk_i )
     if( task_valid_i && task_ready_o )
       print_new_task( task_i );
     
-    if( wr_en_o )
-      print_ram_data( "WR", wr_addr_o, wr_data_o );
+    if( data_table_if.wr_en )
+      print_ram_data( "WR", data_table_if.wr_addr, data_table_if.wr_data );
 
     if( result_valid_o && result_ready_i )
       print_result( "RES", result_o );

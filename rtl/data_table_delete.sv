@@ -56,14 +56,8 @@ module data_table_delete #(
   output                      task_ready_o,
   
   // to data RAM
-  input  ram_data_t           rd_data_i,
-  output logic [A_WIDTH-1:0]  rd_addr_o,
-  output logic                rd_en_o,
+  data_table_if.master        data_table_if,
 
-  output logic [A_WIDTH-1:0]  wr_addr_o,
-  output ram_data_t           wr_data_o,
-  output logic                wr_en_o,
-  
   // to empty pointer storage
   output  [A_WIDTH-1:0]       add_empty_ptr_o,
   output                      add_empty_ptr_en_o,
@@ -112,7 +106,7 @@ rd_data_val_helper #(
   .clk_i                                ( clk_i        ),
   .rst_i                                ( rst_i        ),
 
-  .rd_en_i                              ( rd_en_o      ),
+  .rd_en_i                              ( data_table_if.rd_en      ),
   .rd_data_val_o                        ( rd_data_val  )
 
 );
@@ -198,8 +192,8 @@ always_ff @( posedge clk_i or posedge rst_i )
     if( task_ready_o && task_valid_i )
       task_locked <= task_i;
 
-assign key_match = ( task_locked.cmd.key == rd_data_i.key );
-assign got_tail  = ( rd_data_i.next_ptr_val == 1'b0  );
+assign key_match = ( task_locked.cmd.key == data_table_if.rd_data.key );
+assign got_tail  = ( data_table_if.rd_data.next_ptr_val == 1'b0  );
 
 always_ff @( posedge clk_i or posedge rst_i )
   if( rst_i )
@@ -216,7 +210,7 @@ always_ff @( posedge clk_i or posedge rst_i )
     else
       if( rd_data_val && ( next_state == GO_ON_CHAIN_S ) )
         begin
-          rd_addr      <= rd_data_i.next_ptr;
+          rd_addr      <= data_table_if.rd_data.next_ptr;
           prev_rd_addr <= rd_addr;
         end
 
@@ -235,19 +229,19 @@ always_ff @( posedge clk_i or posedge rst_i )
   else
     if( rd_data_val )
       begin
-        prev_rd_data      <= rd_data_i;
+        prev_rd_data      <= data_table_if.rd_data;
         prev_prev_rd_data <= prev_rd_data;
       end
 
 
 assign task_ready_o = ( state == IDLE_S );
 
-assign rd_en_o      = ( state_first_tick || rd_data_val_d1 ) && ( ( state == READ_HEAD_S   ) || 
+assign data_table_if.rd_en      = ( state_first_tick || rd_data_val_d1 ) && ( ( state == READ_HEAD_S   ) || 
                                                                   ( state == GO_ON_CHAIN_S ) );   
 
-assign rd_addr_o    = rd_addr; 
+assign data_table_if.rd_addr    = rd_addr; 
 
-assign wr_en_o      = state_first_tick && ( ( state == KEY_MATCH_IN_MIDDLE_S  ) ||
+assign data_table_if.wr_en      = state_first_tick && ( ( state == KEY_MATCH_IN_MIDDLE_S  ) ||
                                             ( state == KEY_MATCH_IN_TAIL_S    ) || 
                                             ( state == CLEAR_RAM_AND_PTR_S    ) );
 
@@ -255,43 +249,43 @@ ram_data_t rd_data_locked;
 
 always_ff @( posedge clk_i )
   if( rd_data_val )
-    rd_data_locked <= rd_data_i;
+    rd_data_locked <= data_table_if.rd_data;
 
 always_comb
   begin
-    wr_data_o = prev_prev_rd_data;
-    wr_addr_o = 'x;
+    data_table_if.wr_data = prev_prev_rd_data;
+    data_table_if.wr_addr = 'x;
 
     case( state )
 
       CLEAR_RAM_AND_PTR_S:
         begin
-          wr_data_o = '0; 
+          data_table_if.wr_data = '0; 
 
-          wr_addr_o = rd_addr;
+          data_table_if.wr_addr = rd_addr;
         end
 
       KEY_MATCH_IN_MIDDLE_S:
         begin
-          wr_data_o.next_ptr     = rd_data_locked.next_ptr;
-          wr_data_o.next_ptr_val = rd_data_locked.next_ptr_val;
+          data_table_if.wr_data.next_ptr     = rd_data_locked.next_ptr;
+          data_table_if.wr_data.next_ptr_val = rd_data_locked.next_ptr_val;
 
-          wr_addr_o              = prev_rd_addr;
+          data_table_if.wr_addr              = prev_rd_addr;
         end
       
       KEY_MATCH_IN_TAIL_S:
         begin
-          wr_data_o.next_ptr     = '0;
-          wr_data_o.next_ptr_val = 1'b0;
+          data_table_if.wr_data.next_ptr     = '0;
+          data_table_if.wr_data.next_ptr_val = 1'b0;
 
-          wr_addr_o              = prev_rd_addr;
+          data_table_if.wr_addr              = prev_rd_addr;
         end
 
       default:
         begin
           // do nothing
-          wr_data_o = prev_prev_rd_data;
-          wr_addr_o = 'x;
+          data_table_if.wr_data = prev_prev_rd_data;
+          data_table_if.wr_addr = 'x;
         end
     endcase
   end
@@ -358,8 +352,8 @@ logic [A_WIDTH-1:0] rd_addr_latched;
 
 always_latch
   begin
-    if( rd_en_o )
-      rd_addr_latched <= rd_addr_o;
+    if( data_table_if.rd_en )
+      rd_addr_latched <= data_table_if.rd_addr;
   end
 
 always_ff @( posedge clk_i )
@@ -368,10 +362,10 @@ always_ff @( posedge clk_i )
       print_new_task( task_i );
     
     if( rd_data_val )
-      print_ram_data( "RD", rd_addr_latched, rd_data_i );
+      print_ram_data( "RD", rd_addr_latched, data_table_if.rd_data );
 
-    if( wr_en_o )
-      print_ram_data( "WR", wr_addr_o, wr_data_o );
+    if( data_table_if.wr_en )
+      print_ram_data( "WR", data_table_if.wr_addr, data_table_if.wr_data );
     
     if( result_valid_o && result_ready_i )
       print_result( "RES", result_o );

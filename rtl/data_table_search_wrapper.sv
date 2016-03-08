@@ -25,10 +25,7 @@ module data_table_search_wrapper #(
   output logic                task_in_proccess_o, 
   
   // reading from data RAM
-  input  ram_data_t           rd_data_i, 
-
-  output logic [A_WIDTH-1:0]  rd_addr_o,
-  output logic                rd_en_o,
+  data_table_if.master        data_table_if,
   
   // output interface with search result
   output ht_result_t          result_o,
@@ -121,7 +118,7 @@ generate
         .task_ready_o                           ( task_ready_w[g]   ),
 
         .rd_avail_i                             ( rd_avail[g]       ),
-        .rd_data_i                              ( rd_data_i         ),
+        .rd_data_i                              ( data_table_if.rd_data ),
         .rd_data_val_i                          ( rd_data_val[g]    ),
 
         .rd_addr_o                              ( rd_addr[g]        ),
@@ -138,18 +135,23 @@ endgenerate
 always_comb
   begin
     // dummy selector realization
-    rd_addr_o = '0;
-    rd_en_o   = 1'b0;
+    data_table_if.rd_addr = '0;
+    data_table_if.rd_en   = 1'b0;
 
     for( int i = 0; i < ENGINES_CNT; i++ )
       begin
         if( rd_en[ i ] )
           begin
-            rd_addr_o = rd_addr[ i ];
-            rd_en_o   = 1'b1;
+            data_table_if.rd_addr = rd_addr[ i ];
+            data_table_if.rd_en   = 1'b1;
           end
       end
   end
+
+// no write support here
+assign data_table_if.wr_addr = 'x;
+assign data_table_if.wr_data = 'x;
+assign data_table_if.wr_en   = 1'b0;
 
 // collecting results in right order
 always_ff @( posedge clk_i or posedge rst_i )

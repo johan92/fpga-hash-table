@@ -418,11 +418,11 @@ assign tm_head_table_wr_data.ptr_val = dut.head_table_if.wr_data_ptr_val;
 assign tm_head_table_wr_addr         = dut.head_table_if.wr_addr;
 assign tm_head_table_wr_en           = dut.head_table_if.wr_en;
 
-assign tm_data_table_wr_data         = dut.d_tbl.ram_wr_data; 
-assign tm_data_table_wr_addr         = dut.d_tbl.ram_wr_addr;
-assign tm_data_table_wr_en           = dut.d_tbl.ram_wr_en;
-assign tm_data_table_rd_addr         = dut.d_tbl.ram_rd_addr;
-assign tm_data_table_rd_en           = dut.d_tbl.ram_rd_en;
+assign tm_data_table_wr_data         = dut.d_tbl.data_table_ram_if.wr_data; 
+assign tm_data_table_wr_addr         = dut.d_tbl.data_table_ram_if.wr_addr;
+assign tm_data_table_wr_en           = dut.d_tbl.data_table_ram_if.wr_en;
+assign tm_data_table_rd_addr         = dut.d_tbl.data_table_ram_if.rd_addr;
+assign tm_data_table_rd_en           = dut.d_tbl.data_table_ram_if.rd_en;
 
 assign empty_ptr_srst                = dut.d_tbl.empty_ptr_storage_srst_w;
 assign empty_ptr_add_addr            = dut.d_tbl.add_empty_ptr; 
