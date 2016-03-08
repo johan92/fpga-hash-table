@@ -28,4 +28,14 @@ modport slave(
          wr_en
 );
 
+// synthesis translate_off
+clocking cb @( posedge clk );
+
+  input wr_addr,
+        wr_data,
+        wr_en;
+
+endclocking
+// synthesis translate_on
+
 endinterface

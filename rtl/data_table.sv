@@ -14,9 +14,9 @@ module data_table(
   input                                pdata_in_valid_i,
   output               logic           pdata_in_ready_o,
 
-  ht_res_if.master                     ht_res_out,
-  
-  head_table_if.master                 head_table_if
+  head_table_if.master                 head_table_if,
+
+  ht_res_if.master                     ht_res_out
 
 );
 localparam D_WIDTH     = $bits( ram_data_t );
@@ -29,10 +29,6 @@ localparam INSERT_ = 2;
 localparam DELETE_ = 3;
 
 localparam DIR_CNT = 4; 
-
-logic       [A_WIDTH-1:0] empty_addr;
-logic                     empty_addr_val;
-logic                     empty_addr_rd_ack;
 
 logic       [A_WIDTH-1:0] init_add_empty_ptr;
 logic                     init_add_empty_ptr_en;
@@ -49,6 +45,10 @@ logic                task_ready       [DIR_CNT-1:0];
 logic                task_processing  [DIR_CNT-1:0];
 
 logic                search_task_in_proccess;
+
+empty_ptr_storage_if eps_if(
+  .clk( clk_i )
+);
 
 ht_res_if ht_eng_res[DIR_CNT-1:0]( 
   .clk ( clk_i )
@@ -81,7 +81,7 @@ data_table_init init_eng(
   .head_table_if                          ( head_table_eng_if[INIT_] ),
 
   // to empty pointer storage
-  .empty_ptr_storage_srst_o               ( empty_ptr_storage_srst_w ),
+  .empty_ptr_storage_srst_o               ( eps_if.srst              ),
   .add_empty_ptr_o                        ( init_add_empty_ptr       ),
   .add_empty_ptr_en_o                     ( init_add_empty_ptr_en    ),
     
@@ -123,13 +123,13 @@ data_table_insert #(
   .data_table_if                          ( data_table_if    [INSERT_]  ),
     
     // to empty pointer storage
-  .empty_addr_i                           ( empty_addr                  ),
-  .empty_addr_val_i                       ( empty_addr_val              ),
-  .empty_addr_rd_ack_o                    ( empty_addr_rd_ack           ),
+  .empty_addr_i                           ( eps_if.next_empty_ptr        ),
+  .empty_addr_val_i                       ( eps_if.next_empty_ptr_val    ),
+  .empty_addr_rd_ack_o                    ( eps_if.next_empty_ptr_rd_ack ),
 
-  .head_table_if                          ( head_table_eng_if[INSERT_]  ),
+  .head_table_if                          ( head_table_eng_if[INSERT_]   ),
 
-  .ht_res_if                              ( ht_eng_res[INSERT_]         )
+  .ht_res_if                              ( ht_eng_res[INSERT_]          )
 );
 
 data_table_delete #(
@@ -211,33 +211,21 @@ always_comb
   begin
     if( init_add_empty_ptr_en )
       begin
-        add_empty_ptr     = init_add_empty_ptr; 
-        add_empty_ptr_en  = init_add_empty_ptr_en;
+        eps_if.add_empty_ptr     = init_add_empty_ptr; 
+        eps_if.add_empty_ptr_en  = init_add_empty_ptr_en;
       end
     else
       begin
-        add_empty_ptr     = delete_add_empty_ptr; 
-        add_empty_ptr_en  = delete_add_empty_ptr_en;
+        eps_if.add_empty_ptr     = delete_add_empty_ptr; 
+        eps_if.add_empty_ptr_en  = delete_add_empty_ptr_en;
       end
   end
 
-
-empty_ptr_storage #(
-  .A_WIDTH                                ( TABLE_ADDR_WIDTH  )
-) empty_ptr_storage (
-
+empty_ptr_storage empty_ptr_storage(
   .clk_i                                  ( clk_i             ),
   .rst_i                                  ( rst_i             ),
 
-  .srst_i                                 ( empty_ptr_storage_srst_w ),
-    
-  .add_empty_ptr_i                        ( add_empty_ptr     ),
-  .add_empty_ptr_en_i                     ( add_empty_ptr_en  ),
-    
-  .next_empty_ptr_rd_ack_i                ( empty_addr_rd_ack ),
-  .next_empty_ptr_o                       ( empty_addr        ),
-  .next_empty_ptr_val_o                   ( empty_addr_val    )
-
+  .eps_if                                 ( eps_if            )
 );
 
 true_dual_port_ram_single_clock #( 

@@ -98,9 +98,7 @@ class ht_monitor;
         
 
         cg_pre_sample( );
-
         this.cg.sample( );
-
         cg_post_sample( );
       end
   endtask

@@ -4,64 +4,53 @@
 // Author        : Ivan Shevchuk (github/johan92)
 //-----------------------------------------------------------------------------
 
-module empty_ptr_storage #(
-  parameter A_WIDTH = 8
-)(
+import hash_table::*;
 
-  input                clk_i,
-  input                rst_i,
-
-  input                srst_i,
-  
-  // interface to add empty pointers
-  input  [A_WIDTH-1:0] add_empty_ptr_i,
-  input                add_empty_ptr_en_i,
-  
-  // interface to read empty pointers,
-  // if val is zero - there is no more empty pointers
-  input                next_empty_ptr_rd_ack_i,
-  output [A_WIDTH-1:0] next_empty_ptr_o,
-  output               next_empty_ptr_val_o
+module empty_ptr_storage (
+  input                      clk_i,
+  input                      rst_i,
+ 
+  // eps - empty ptr storage ^__^
+  empty_ptr_storage_if.slave eps_if
 
 );
+
+localparam A_WIDTH = hash_table::TABLE_ADDR_WIDTH;
 
 logic fifo_empty;
 logic fifo_full;
 
 ht_scfifo #(
-  .DATA_W                                 ( A_WIDTH                 ),
-  .ADDR_W                                 ( A_WIDTH                 )
+  .DATA_W                                 ( A_WIDTH                      ),
+  .ADDR_W                                 ( A_WIDTH                      )
 ) fifo (
-  .clk_i                                  ( clk_i                   ),
-  .rst_i                                  ( rst_i                   ),
+  .clk_i                                  ( clk_i                        ),
+  .rst_i                                  ( rst_i                        ),
 
-  .srst_i                                 ( srst_i                  ),
+  .srst_i                                 ( eps_if.srst                  ),
 
-  .wr_data_i                              ( add_empty_ptr_i         ),
-  .wr_req_i                               ( add_empty_ptr_en_i      ),
+  .wr_data_i                              ( eps_if.add_empty_ptr         ),
+  .wr_req_i                               ( eps_if.add_empty_ptr_en      ),
    
-  .rd_req_i                               ( next_empty_ptr_rd_ack_i ),
-  .rd_data_o                              ( next_empty_ptr_o        ),
+  .rd_req_i                               ( eps_if.next_empty_ptr_rd_ack ),
+  .rd_data_o                              ( eps_if.next_empty_ptr        ),
  
-  .empty_o                                ( fifo_empty              ),
-  .full_o                                 ( fifo_full               )
+  .empty_o                                ( fifo_empty                   ),
+  .full_o                                 ( fifo_full                    )
   
 );
 
-assign next_empty_ptr_val_o = !fifo_empty;
+assign eps_if.next_empty_ptr_val = !fifo_empty;
 
 // synthesis translate_off
-
-function void print( string msg );
-  $display("%08t: %m: %s", $time, msg);
-endfunction
+`include "../tb/ht_dbg.vh"
 
 function void print_add_empty_ptr( );
   string msg;
 
-  if( add_empty_ptr_en_i )
+  if( eps_if.add_empty_ptr_en )
     begin
-      $sformat( msg, "add_empty_ptr: 0x%x", add_empty_ptr_i );
+      $sformat( msg, "add_empty_ptr: 0x%x", eps_if.add_empty_ptr );
       print( msg );
     end
 endfunction
@@ -69,9 +58,9 @@ endfunction
 function void print_get_empty_ptr( );
   string msg;
 
-  if( next_empty_ptr_rd_ack_i )
+  if( eps_if.next_empty_ptr_rd_ack )
     begin
-      $sformat( msg, "get_empty_ptr: 0x%x", next_empty_ptr_o );
+      $sformat( msg, "get_empty_ptr: 0x%x", eps_if.next_empty_ptr );
       print( msg );
     end
 endfunction
@@ -85,7 +74,6 @@ initial
         print_get_empty_ptr( );
       end
   end
-
 
 // synthesis translate_on
 

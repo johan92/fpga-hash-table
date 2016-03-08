@@ -342,18 +342,18 @@ initial
     test_03( );
     test_04( );
     
-    //init_hash_table( );
+    init_hash_table( );
 
-    //test_05( );
-    //
-    //init_hash_table( );
-    //
-    //test_06( );
-    //
-    //init_hash_table( );
-    //
-    //test_07( 2**TABLE_ADDR_WIDTH + 10 );
-    //test_08( 100, 200 );
+    test_05( );
+    
+    init_hash_table( );
+    
+    test_06( );
+    
+    init_hash_table( );
+    
+    test_07( 2**TABLE_ADDR_WIDTH + 10 );
+    test_08( 100, 200 );
    
     wait_end_of_tests( );
 
@@ -366,7 +366,12 @@ initial
 initial
   begin
     env = new( );
-    env.build( ht_cmd_in, ht_res_out );
+    env.build( ht_cmd_in, 
+               ht_res_out, 
+               dut.head_table_if, 
+               dut.d_tbl.data_table_ram_if,
+               dut.d_tbl.eps_if
+             );
 
     wait( rst_done );
     @( posedge clk );
@@ -384,68 +389,6 @@ hash_table_top dut(
   .ht_cmd_in                              ( ht_cmd_in         ),
   .ht_res_out                             ( ht_res_out        )
 
-);
-
-head_ram_data_t                        tm_head_table_wr_data;
-logic           [BUCKET_WIDTH-1:0]     tm_head_table_wr_addr;
-logic                                  tm_head_table_wr_en;
-
-  // data table
-ram_data_t                             tm_data_table_wr_data;
-logic           [TABLE_ADDR_WIDTH-1:0] tm_data_table_wr_addr;
-logic                                  tm_data_table_wr_en;
-logic           [TABLE_ADDR_WIDTH-1:0] tm_data_table_rd_addr;
-logic                                  tm_data_table_rd_en;
-
-logic                                  empty_ptr_srst;
-
-logic           [TABLE_ADDR_WIDTH-1:0] empty_ptr_add_addr;
-logic                                  empty_ptr_add_addr_en;
-
-logic           [TABLE_ADDR_WIDTH-1:0] empty_ptr_del_addr;
-logic                                  empty_ptr_del_addr_en;
-
-// via hierarical access getting wires
-assign tm_head_table_wr_data         = dut.head_table_if.wr_data;
-assign tm_head_table_wr_addr         = dut.head_table_if.wr_addr;
-assign tm_head_table_wr_en           = dut.head_table_if.wr_en;
-
-assign tm_data_table_wr_data         = dut.d_tbl.data_table_ram_if.wr_data; 
-assign tm_data_table_wr_addr         = dut.d_tbl.data_table_ram_if.wr_addr;
-assign tm_data_table_wr_en           = dut.d_tbl.data_table_ram_if.wr_en;
-assign tm_data_table_rd_addr         = dut.d_tbl.data_table_ram_if.rd_addr;
-assign tm_data_table_rd_en           = dut.d_tbl.data_table_ram_if.rd_en;
-
-assign empty_ptr_srst                = dut.d_tbl.empty_ptr_storage_srst_w;
-assign empty_ptr_add_addr            = dut.d_tbl.add_empty_ptr; 
-assign empty_ptr_add_addr_en         = dut.d_tbl.add_empty_ptr_en;
-assign empty_ptr_del_addr            = dut.d_tbl.empty_addr;
-assign empty_ptr_del_addr_en         = dut.d_tbl.empty_addr_rd_ack && 
-                                       dut.d_tbl.empty_addr_val;
-tables_monitor tm(
-
-  .clk_i                                  ( clk                    ),
-  .rst_i                                  ( rst                    ),
-
-  // head_ptr table
-  .head_table_wr_data_i                   ( tm_head_table_wr_data  ),
-  .head_table_wr_addr_i                   ( tm_head_table_wr_addr  ),
-  .head_table_wr_en_i                     ( tm_head_table_wr_en    ),
-
-  // data table
-  .data_table_wr_data_i                   ( tm_data_table_wr_data  ),
-  .data_table_wr_addr_i                   ( tm_data_table_wr_addr  ),
-  .data_table_wr_en_i                     ( tm_data_table_wr_en    ),
-
-  .data_table_rd_addr_i                   ( tm_data_table_rd_addr  ),
-  .data_table_rd_en_i                     ( tm_data_table_rd_en    ),
-
-  .empty_ptr_srst_i                       ( empty_ptr_srst         ),
-  .empty_ptr_add_addr_i                   ( empty_ptr_add_addr     ),
-  .empty_ptr_add_addr_en_i                ( empty_ptr_add_addr_en  ),
-
-  .empty_ptr_del_addr_i                   ( empty_ptr_del_addr     ),
-  .empty_ptr_del_addr_en_i                ( empty_ptr_del_addr_en  )
 );
 
 endmodule

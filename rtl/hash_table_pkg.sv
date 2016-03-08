@@ -116,13 +116,22 @@ package hash_table;
 
   function string result2str( input ht_result_t result );
     string s;
+
     case( result.cmd.opcode )
+      OP_INIT:
+        $sformat( s, "rescode = %s", result.rescode );
+
       OP_SEARCH:
         $sformat( s, "key = 0x%x value = 0x%x rescode = %s chain_state = %s", 
                       result.cmd.key, result.found_value, result.rescode, result.chain_state );
       OP_INSERT, OP_DELETE:
         $sformat( s, "key = 0x%x value = 0x%x rescode = %s chain_state = %s", 
                       result.cmd.key, result.cmd.value, result.rescode, result.chain_state );
+      default:
+        begin
+          s = "";
+          $error( "Unknown opcode [%s]!", result.cmd.opcode );
+        end
     endcase
     
     return s;

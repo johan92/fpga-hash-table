@@ -12,6 +12,7 @@ import hash_table::*;
 `include "ht_driver.sv"
 `include "ht_monitor.sv"
 `include "ht_scoreboard.sv"
+`include "ht_inner_scoreboard.sv"
 `include "ht_environment.sv"
 
 endpackage
