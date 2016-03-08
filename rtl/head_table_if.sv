@@ -13,21 +13,18 @@ interface head_table_if #(
 );
 
 logic [A_WIDTH-1:0]        wr_addr;
-logic [HEAD_PTR_WIDTH-1:0] wr_data_ptr;
-logic                      wr_data_ptr_val;
+head_ram_data_t            wr_data;
 logic                      wr_en;
 
 modport master(
   output wr_addr,
-         wr_data_ptr,
-         wr_data_ptr_val,
+         wr_data,
          wr_en
 );
 
 modport slave(
   input  wr_addr,
-         wr_data_ptr,
-         wr_data_ptr_val,
+         wr_data,
          wr_en
 );
 

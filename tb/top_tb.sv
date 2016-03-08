@@ -413,8 +413,7 @@ logic           [TABLE_ADDR_WIDTH-1:0] empty_ptr_del_addr;
 logic                                  empty_ptr_del_addr_en;
 
 // via hierarical access getting wires
-assign tm_head_table_wr_data.ptr     = dut.head_table_if.wr_data_ptr;
-assign tm_head_table_wr_data.ptr_val = dut.head_table_if.wr_data_ptr_val;
+assign tm_head_table_wr_data         = dut.head_table_if.wr_data;
 assign tm_head_table_wr_addr         = dut.head_table_if.wr_addr;
 assign tm_head_table_wr_en           = dut.head_table_if.wr_en;
 

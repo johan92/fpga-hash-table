@@ -129,8 +129,8 @@ always_ff @( posedge clk_i or posedge rst_i )
         data_table_init_done <= 1'b1;
 
 assign head_table_if.wr_addr         = cnt_addr[BUCKET_WIDTH-1:0];
-assign head_table_if.wr_data_ptr     = '0; 
-assign head_table_if.wr_data_ptr_val = 1'b0;
+assign head_table_if.wr_data.ptr     = '0; 
+assign head_table_if.wr_data.ptr_val = 1'b0;
 assign head_table_if.wr_en           = ( state == INIT_RAMS_S ) && ( head_table_init_done == 1'b0 ); 
 
 assign data_table_if.wr_addr = cnt_addr[A_WIDTH-1:0]; 

@@ -62,16 +62,8 @@ data_table_if data_table_ram_if(
   .clk ( clk_i )
 );
 
-head_table_if head_table_init_if( 
-  .clk( clk_i )
-);
-
-head_table_if head_table_insert_if( 
-  .clk( clk_i )
-);
-
-head_table_if head_table_delete_if( 
-  .clk( clk_i )
+head_table_if head_table_eng_if[DIR_CNT-1:0] (
+  .clk ( clk_i )
 );
 
 logic empty_ptr_storage_srst_w;
@@ -86,7 +78,7 @@ data_table_init init_eng(
   
   .data_table_if                          ( data_table_if[INIT_]     ),
     
-  .head_table_if                          ( head_table_init_if       ),
+  .head_table_if                          ( head_table_eng_if[INIT_] ),
 
   // to empty pointer storage
   .empty_ptr_storage_srst_o               ( empty_ptr_storage_srst_w ),
@@ -113,6 +105,8 @@ data_table_search_wrapper #(
   
   .data_table_if                          ( data_table_if[SEARCH_]     ),
 
+  .head_table_if                          ( head_table_eng_if[SEARCH_] ),
+
   .ht_res_if                              ( ht_eng_res[SEARCH_]        )
 );
 
@@ -133,7 +127,7 @@ data_table_insert #(
   .empty_addr_val_i                       ( empty_addr_val              ),
   .empty_addr_rd_ack_o                    ( empty_addr_rd_ack           ),
 
-  .head_table_if                          ( head_table_insert_if        ),
+  .head_table_if                          ( head_table_eng_if[INSERT_]  ),
 
   .ht_res_if                              ( ht_eng_res[INSERT_]         )
 );
@@ -155,7 +149,7 @@ data_table_delete #(
   .add_empty_ptr_o                        ( delete_add_empty_ptr            ),
   .add_empty_ptr_en_o                     ( delete_add_empty_ptr_en         ),
 
-  .head_table_if                          ( head_table_delete_if            ),
+  .head_table_if                          ( head_table_eng_if [DELETE_]     ),
 
   .ht_res_if                              ( ht_eng_res[DELETE_]             )
 );
@@ -249,31 +243,13 @@ data_table_if_mux #(
 );
 
 // ******* MUX to head_table *******
-always_comb
-  begin
-    if( head_table_init_if.wr_en )
-      begin
-        head_table_if.wr_addr         = head_table_init_if.wr_addr;         
-        head_table_if.wr_data_ptr     = head_table_init_if.wr_data_ptr;     
-        head_table_if.wr_data_ptr_val = head_table_init_if.wr_data_ptr_val;
-        head_table_if.wr_en           = head_table_init_if.wr_en; 
-      end
-    else
-      if( head_table_insert_if.wr_en )
-        begin
-          head_table_if.wr_addr         = head_table_insert_if.wr_addr;         
-          head_table_if.wr_data_ptr     = head_table_insert_if.wr_data_ptr;     
-          head_table_if.wr_data_ptr_val = head_table_insert_if.wr_data_ptr_val;
-          head_table_if.wr_en           = head_table_insert_if.wr_en; 
-        end
-      else
-        begin
-          head_table_if.wr_addr         = head_table_delete_if.wr_addr;         
-          head_table_if.wr_data_ptr     = head_table_delete_if.wr_data_ptr;     
-          head_table_if.wr_data_ptr_val = head_table_delete_if.wr_data_ptr_val;
-          head_table_if.wr_en           = head_table_delete_if.wr_en; 
-        end
-  end
+
+head_table_if_mux #(
+  .DIR_CNT                                ( DIR_CNT           )
+) head_table_if_mux (
+  .in_if                                  ( head_table_eng_if ),
+  .out_if                                 ( head_table_if     )
+);
 
 // ******* Muxing cmd result *******
 

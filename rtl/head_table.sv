@@ -125,8 +125,7 @@ always_ff @( posedge clk_i )
     end
 
 assign wr_addr          = head_table_if.wr_addr;
-assign wr_data.ptr      = head_table_if.wr_data_ptr;
-assign wr_data.ptr_val  = head_table_if.wr_data_ptr_val;
+assign wr_data          = head_table_if.wr_data;
 assign wr_en            = head_table_if.wr_en; 
 
 ht_pdata_t pdata_in_d1;

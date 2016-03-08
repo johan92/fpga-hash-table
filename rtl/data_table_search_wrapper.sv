@@ -26,6 +26,8 @@ module data_table_search_wrapper #(
   
   // reading from data RAM
   data_table_if.master        data_table_if,
+
+  head_table_if.master        head_table_if,
   
   // output interface with search result
   ht_res_if.master            ht_res_if
@@ -150,6 +152,12 @@ always_comb
 assign data_table_if.wr_addr = 'x;
 assign data_table_if.wr_data = 'x;
 assign data_table_if.wr_en   = 1'b0;
+
+// search engine nothing writes to head table
+assign head_table_if.wr_addr = 'x;
+assign head_table_if.wr_data = 'x;
+assign head_table_if.wr_en   = 1'b0;
+
 
 // collecting results in right order
 always_ff @( posedge clk_i or posedge rst_i )

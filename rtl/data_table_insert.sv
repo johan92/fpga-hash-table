@@ -268,8 +268,8 @@ always_comb
   end
 
 assign head_table_if.wr_addr          = task_locked.bucket; 
-assign head_table_if.wr_data_ptr      = empty_addr_i; 
-assign head_table_if.wr_data_ptr_val  = 1'b1;
+assign head_table_if.wr_data.ptr      = empty_addr_i; 
+assign head_table_if.wr_data.ptr_val  = 1'b1;
 assign head_table_if.wr_en            = state_first_tick && ( state == NO_HEAD_PTR_WR_HEAD_PTR_S );
 
 

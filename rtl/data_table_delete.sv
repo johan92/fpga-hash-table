@@ -289,8 +289,8 @@ always_comb
 
 // ******* Head Ptr table magic *******
 assign head_table_if.wr_addr          = task_locked.bucket; 
-assign head_table_if.wr_data_ptr      = rd_data_locked.next_ptr;
-assign head_table_if.wr_data_ptr_val  = rd_data_locked.next_ptr_val;
+assign head_table_if.wr_data.ptr      = rd_data_locked.next_ptr;
+assign head_table_if.wr_data.ptr_val  = rd_data_locked.next_ptr_val;
 assign head_table_if.wr_en            = state_first_tick && ( state == KEY_MATCH_IN_HEAD_S );
 
 // ******* Empty ptr storage ******
