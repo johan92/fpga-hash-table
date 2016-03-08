@@ -26,4 +26,18 @@ modport slave(
   output ready
 );
 
+
+// synthesis translate_off
+
+logic accepted;
+
+assign accepted = valid && ready;
+
+clocking cb @( posedge clk );
+  input result,
+        accepted;
+endclocking
+
+// synthesis translate_on
+
 endinterface

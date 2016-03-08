@@ -342,18 +342,18 @@ initial
     test_03( );
     test_04( );
     
-    init_hash_table( );
+    //init_hash_table( );
 
-    test_05( );
-    
-    init_hash_table( );
-    
-    test_06( );
-    
-    init_hash_table( );
-    
-    test_07( 2**TABLE_ADDR_WIDTH + 10 );
-    test_08( 100, 200 );
+    //test_05( );
+    //
+    //init_hash_table( );
+    //
+    //test_06( );
+    //
+    //init_hash_table( );
+    //
+    //test_07( 2**TABLE_ADDR_WIDTH + 10 );
+    //test_08( 100, 200 );
    
     wait_end_of_tests( );
 
@@ -383,15 +383,6 @@ hash_table_top dut(
     
   .ht_cmd_in                              ( ht_cmd_in         ),
   .ht_res_out                             ( ht_res_out        )
-
-);
-
-ht_res_monitor resm(
-  .clk_i                                  ( clk                ),
-
-  .result_i                               ( ht_res_out.result  ),
-  .result_valid_i                         ( ht_res_out.valid   ),
-  .result_ready_i                         ( ht_res_out.ready   )
 
 );
 

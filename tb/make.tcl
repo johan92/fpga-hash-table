@@ -5,7 +5,6 @@ proc do_compile {} {
   # compiling files
   vlog -work work -coverall "../rtl/hash_table_pkg.sv"
   vlog -work work -coverall "../tb/ht_tb_pkg.sv"
-  vlog -work work -coverall "../tb/ht_res_monitor.sv"
   vlog -work work -coverall "../tb/tables_monitor.sv"
   vlog -work work -coverall "top_tb.sv"
   vlog -work work -coverall "../rtl/*.sv" 
