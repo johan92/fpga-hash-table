@@ -22,21 +22,16 @@ class ht_monitor;
   ht_result_t                    r_history        [HISTORY_DELAY : 1];
   logic        [HISTORY_DELAY:1] bucket_hist_mask;
 
-  covergroup cg( );
+  int                            results_received;
+
+  covergroup cg_cur( );
     option.per_instance = 1;
 
     CMDOP:      coverpoint r.cmd.opcode;
+
     CMDRES:     coverpoint r.rescode;
-
-    CMDOP_D1:   coverpoint r_history[1].cmd.opcode;
-    CMDOP_D2:   coverpoint r_history[2].cmd.opcode;
-
-    CMDRES_D1:  coverpoint r_history[1].rescode;
-    CMDRES_D2:  coverpoint r_history[2].rescode;
     
     CHAIN:      coverpoint r.chain_state;
-
-    BUCK_HIST_MASK: coverpoint bucket_hist_mask;
 
     BUCKOCUP: coverpoint bucket_occup[ r.bucket ] {
       bins zero   = { 0 };
@@ -47,40 +42,79 @@ class ht_monitor;
       bins other  = { [5:$] };
     }
     
-    CMDOP_BUCKOCUP: cross CMDOP, BUCKOCUP; 
+    CMDOP_BUCKOCUP: cross CMDOP, BUCKOCUP {
+      ignore_bins dont_care_init = binsof( CMDOP ) intersect{ OP_INIT };
+    }
 
     CMDRES_BUCKOCUP: cross CMDRES, BUCKOCUP {
       // we should ignore SEARCH_FOUND, INSERT_SUCCESS_SAME_KEY, DELETE_SUCCESS 
       // when in bucket was zero elements, because it's not real situation
       ignore_bins not_real = binsof( CMDRES   ) intersect{ SEARCH_FOUND, INSERT_SUCCESS_SAME_KEY, DELETE_SUCCESS  } && 
                              binsof( BUCKOCUP ) intersect{ 0 };
-    }
-    
-    CMDOP_HISTORY_D2: cross CMDOP_D2, CMDOP_D1, CMDOP, BUCK_HIST_MASK;
-    
-    CMDRES_HISTORY_D2: cross CMDRES_D2, CMDRES_D1, CMDRES, BUCK_HIST_MASK {
-      ignore_bins not_check_now = binsof( CMDRES    ) intersect{ INSERT_NOT_SUCCESS_TABLE_IS_FULL } || 
-                                  binsof( CMDRES_D1 ) intersect{ INSERT_NOT_SUCCESS_TABLE_IS_FULL } ||
-                                  binsof( CMDRES_D2 ) intersect{ INSERT_NOT_SUCCESS_TABLE_IS_FULL };
+
+      ignore_bins dont_care_init = binsof( CMDRES ) intersect{ INIT_SUCCESS };
     }
     
     CMDOP_CHAIN: cross CMDOP, CHAIN {
+      // not real situations
       ignore_bins insert_in_middle        = binsof( CMDOP ) intersect { OP_INSERT        } && 
                                             binsof( CHAIN ) intersect { IN_MIDDLE        };
 
       ignore_bins insert_in_tail_no_match = binsof( CMDOP ) intersect { OP_INSERT        } && 
                                             binsof( CHAIN ) intersect { IN_TAIL_NO_MATCH };
 
+      ignore_bins dont_care_init          = binsof( CMDOP ) intersect { OP_INIT };                                          
+
     }
 
   endgroup
+
+  covergroup cg_hist( );
+    option.per_instance = 1;
+
+    CMDOP:      coverpoint r.cmd.opcode;
+    CMDOP_D1:   coverpoint r_history[1].cmd.opcode;
+    CMDOP_D2:   coverpoint r_history[2].cmd.opcode;
+
+    CMDRES:     coverpoint r.rescode;
+    CMDRES_D1:  coverpoint r_history[1].rescode;
+    CMDRES_D2:  coverpoint r_history[2].rescode;
+    
+    BUCK_HIST_MASK: coverpoint bucket_hist_mask;
+   
+    CMDOP_HISTORY_D2: cross CMDOP_D2, CMDOP_D1, CMDOP;
+
+    CMDOP_HISTORY_D2_BUCK_HIST_MASK: cross CMDOP_D2, CMDOP_D1, CMDOP, BUCK_HIST_MASK {
+      ignore_bins dont_care_init = binsof( CMDOP    ) intersect{ OP_INIT } ||
+                                   binsof( CMDOP_D1 ) intersect{ OP_INIT } ||
+                                   binsof( CMDOP_D2 ) intersect{ OP_INIT };
+    }
+    
+    CMDRES_HISTORY_D2: cross CMDRES_D2, CMDRES_D1, CMDRES {
+      ignore_bins not_check_now = binsof( CMDRES    ) intersect{ INSERT_NOT_SUCCESS_TABLE_IS_FULL } || 
+                                  binsof( CMDRES_D1 ) intersect{ INSERT_NOT_SUCCESS_TABLE_IS_FULL } ||
+                                  binsof( CMDRES_D2 ) intersect{ INSERT_NOT_SUCCESS_TABLE_IS_FULL };
+    }
+    
+    CMDRES_HISTORY_D2_BUCK_HIST_MASK: cross CMDRES_D2, CMDRES_D1, CMDRES, BUCK_HIST_MASK {
+      ignore_bins not_check_now = binsof( CMDRES    ) intersect{ INSERT_NOT_SUCCESS_TABLE_IS_FULL } || 
+                                  binsof( CMDRES_D1 ) intersect{ INSERT_NOT_SUCCESS_TABLE_IS_FULL } ||
+                                  binsof( CMDRES_D2 ) intersect{ INSERT_NOT_SUCCESS_TABLE_IS_FULL };
+
+      ignore_bins dont_care_init = binsof( CMDRES    ) intersect{ INIT_SUCCESS } ||
+                                   binsof( CMDRES_D1 ) intersect{ INIT_SUCCESS } ||
+                                   binsof( CMDRES_D2 ) intersect{ INIT_SUCCESS };
+    }
+  endgroup
+  
   
   // ******* *******
   
   function new( input mailbox #( ht_result_t ) _mon2scb, virtual ht_res_if _res_if );
     this.mon2scb = _mon2scb;
     this.__if    = _res_if;
-    this.cg      = new( );
+    this.cg_cur  = new( );
+    this.cg_hist = new( );
   endfunction 
   
   task run( );
@@ -96,9 +130,14 @@ class ht_monitor;
         receive_data(  );
         mon2scb.put( r );
         
-
         cg_pre_sample( );
-        this.cg.sample( );
+        this.cg_cur.sample( );
+        results_received += 1;
+        
+        // should wait when got valid data in r_history[HISTORY_DELAY] 
+        if( results_received > HISTORY_DELAY )
+          this.cg_hist.sample( );
+
         cg_post_sample( );
       end
   endtask
@@ -131,6 +170,7 @@ class ht_monitor;
 
       INIT_SUCCESS:
         begin
+          // clearing all counters...
           for( int i = 0; i < BUCKET_CNT; i++ )
             begin
               bucket_occup[i] = 0;
@@ -148,12 +188,12 @@ class ht_monitor;
     endcase
     
     // make history =)
-    r_history[1] = r;
-
-    for( int i = 2; i <= HISTORY_DELAY; i++ )
+    for( int i = HISTORY_DELAY; i >= 2; i-- )
       begin
         r_history[i] = r_history[ i - 1 ];
       end
+
+    r_history[1] = r;
   endtask
   
 endclass

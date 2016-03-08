@@ -313,6 +313,20 @@ task automatic test_08( input int search_cmd_cnt,
 
 endtask
 
+// generate all possible op variants
+//task automatic test_09( input int count );
+//
+//  ht_command_t cmds[$];
+//  
+//  for( int i = 0; 
+//
+//  foreach( cmds[i] )
+//    begin
+//      send_to_dut_c( cmds[i] );
+//    end
+//
+//endtask
+
 task wait_end_of_tests( );
   
   forever
@@ -355,6 +369,10 @@ initial
     test_07( 2**TABLE_ADDR_WIDTH + 10 );
     test_08( 100, 200 );
    
+    @( posedge clk );
+    @( posedge clk );
+    @( posedge clk );
+    @( posedge clk );
     wait_end_of_tests( );
 
     env.post_test( );
