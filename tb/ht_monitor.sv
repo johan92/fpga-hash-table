@@ -4,7 +4,7 @@
 // Author        : Ivan Shevchuk (github/johan92)
 //-----------------------------------------------------------------------------
 
-`include "ht_dbg.vh"
+// `include "ht_dbg.vh"
 
 class ht_monitor;
   
@@ -155,7 +155,7 @@ class ht_monitor;
           end
       end
 
-    print_result( "IN_MONITOR", r );
+    // print_result( "IN_MONITOR", r );
   endtask
 
   task cg_pre_sample( );

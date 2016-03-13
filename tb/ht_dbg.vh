@@ -7,8 +7,15 @@
 `ifndef _HT_DBG_
 `define _HT_DBG_
 
+string inst_name;
+
+initial
+  begin
+    $sformat( inst_name, "%m" );
+  end
+
 function void print( string s );
-  $display("%08t: %m: %s", $time, s);
+  $display("%08t: %s: %s", $time, inst_name, s);
 endfunction
 
 function void print_new_task( ht_pdata_t pdata );
