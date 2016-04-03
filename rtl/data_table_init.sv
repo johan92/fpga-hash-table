@@ -15,6 +15,8 @@ module data_table_init #(
   input  ht_pdata_t           task_i,
   input                       task_valid_i,
   output                      task_ready_o,
+
+  output                      task_in_process_o,
   
   data_table_if.master        data_table_if,
 
@@ -36,7 +38,6 @@ enum int unsigned {
   DO_REPORT_S
 } state, next_state, state_d1;
 
-ht_pdata_t        task_locked;
 logic             head_table_init_done;
 logic             data_table_init_done;
 
@@ -59,7 +60,7 @@ always_comb
     case( state )
       IDLE_S:
         begin
-          if( task_valid_i && task_ready_o )
+          if( task_valid_i )
             begin
               next_state = RESET_EMPTY_PTR_STORAGE_S; 
             end
@@ -86,14 +87,16 @@ always_comb
     endcase
   end
 
-assign task_ready_o = ( state == IDLE_S );
+assign task_ready_o = ( ( state == IDLE_S ) && ( next_state == IDLE_S ) ) || ( state == DO_REPORT_S );
 
-always_ff @( posedge clk_i or posedge rst_i )
-  if( rst_i )
-    task_locked <= '0;
-  else
-    if( task_ready_o && task_valid_i )
-      task_locked <= task_i;
+assign task_in_process_o = ( state != IDLE_S );
+
+//always_ff @( posedge clk_i or posedge rst_i )
+//  if( rst_i )
+//    task_locked <= '0;
+//  else
+//    if( task_ready_o && task_valid_i )
+//      task_locked <= task_i;
 
 localparam CNT_W = ( BUCKET_WIDTH > A_WIDTH ) ? ( BUCKET_WIDTH ) : ( A_WIDTH ); 
 
@@ -149,7 +152,7 @@ always_comb
   begin
     ht_res_if.result         = 'x;
 
-    ht_res_if.result.cmd     = task_locked.cmd;
+    ht_res_if.result.cmd     = task_i.cmd;
     ht_res_if.result.bucket  = 'x; // for OP_INIT bucket have no meaning
 
     ht_res_if.result.rescode = INIT_SUCCESS; // always success init ^_^
@@ -174,7 +177,7 @@ endfunction
 
 always_ff @( posedge clk_i )
   begin
-    if( task_valid_i && task_ready_o )
+    if( task_valid_i )
       print_new_task( task_i );
     
     if( data_table_if.wr_en )

@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 // Author        : Ivan Shevchuk (github/johan92)
 //-----------------------------------------------------------------------------
-
+`timescale 1ns / 1ns
 import hash_table::*;
 import ht_tb::*;
 
@@ -313,19 +313,60 @@ task automatic test_08( input int search_cmd_cnt,
 
 endtask
 
-// generate all possible op variants
-//task automatic test_09( input int count );
-//
-//  ht_command_t cmds[$];
-//  
-//  for( int i = 0; 
-//
-//  foreach( cmds[i] )
-//    begin
-//      send_to_dut_c( cmds[i] );
-//    end
-//
-//endtask
+
+function ht_command_t gen_rand_command( );
+  int t;
+  ht_command_t rez;
+
+  t = $urandom_range( 3, 0 );
+
+  case( t )
+    0:
+      begin
+        rez.opcode = OP_INIT;
+      end
+
+    1:
+      begin
+        rez.opcode = OP_SEARCH;
+        rez.key    = gen_rand_key( ); 
+      end
+
+    2: 
+      begin
+        rez.opcode = OP_INSERT;
+        rez.key    = gen_rand_key( );
+        rez.value  = $urandom( ); 
+      end
+
+    3: 
+      begin
+        rez.opcode = OP_DELETE;
+        rez.key    = gen_rand_key( );
+        rez.value  = $urandom( ); 
+      end
+  endcase
+
+  return rez;
+endfunction
+
+// generate random commands
+task automatic test_09( input int random_cmd_cnt );
+  ht_command_t cmds[$];
+
+  $info("%m:" );
+
+  for( int i = 0; i < random_cmd_cnt; i++ )
+    begin
+      cmds.push_back( gen_rand_command( ) );
+    end
+
+  foreach( cmds[i] )
+    begin
+      send_to_dut_c( cmds[i] );
+    end
+
+endtask
 
 task wait_end_of_tests( );
   
@@ -368,6 +409,24 @@ initial
     
     test_07( 2**TABLE_ADDR_WIDTH + 10 );
     test_08( 100, 200 );
+    init_hash_table( );
+
+    test_07( 2**TABLE_ADDR_WIDTH + 10 );
+    test_08( 1000, 2000 );
+    
+    init_hash_table( );
+     
+    for( int i = 0; i < 25; i++ )
+      begin
+        init_hash_table( );
+       
+        test_07( 100 );
+        test_08( 10, 50 );
+        
+        init_hash_table( );
+      end
+
+    test_09( 1500 );
    
     @( posedge clk );
     @( posedge clk );
@@ -380,6 +439,12 @@ initial
     $stop();
   end
 
+init_table_if init_table_if1(
+  .clk( clk )
+);
+
+
+assign init_table_if1.in_init = dut.d_tbl.init_task_in_process;
 
 initial
   begin
@@ -388,7 +453,8 @@ initial
                ht_res_out, 
                dut.head_table_if, 
                dut.d_tbl.data_table_ram_if,
-               dut.d_tbl.eps_if
+               dut.d_tbl.eps_if,
+               init_table_if1
              );
 
     wait( rst_done );

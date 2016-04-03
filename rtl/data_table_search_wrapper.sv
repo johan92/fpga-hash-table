@@ -22,7 +22,7 @@ module data_table_search_wrapper #(
   output                      task_ready_o,
 
   // at least one task in proccess
-  output logic                task_in_proccess_o, 
+  output logic                task_in_process_o, 
   
   // reading from data RAM
   data_table_if.master        data_table_if,
@@ -82,12 +82,12 @@ assign task_ready_o = task_ready_w[ send_num ];
 
 always_comb
   begin
-    task_in_proccess_o = 1'b0;
+    task_in_process_o = 1'b0;
 
     for( int i = 0; i < ENGINES_CNT; i++ )
       begin
         if( task_ready_w[i] == 1'b0 )
-          task_in_proccess_o = 1'b1; 
+          task_in_process_o = 1'b1; 
       end
   end
 

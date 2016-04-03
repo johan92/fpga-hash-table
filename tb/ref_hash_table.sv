@@ -126,8 +126,8 @@ class ref_hash_table;
     keys.shuffle( );
     
     // selecting random key from list
-    r = $urandom_range( keys.size(), 0 );
-
+    r = $urandom_range( keys.size() - 1, 0 );
+    
     key_o = keys[r];
 
     // selfchecking assertion

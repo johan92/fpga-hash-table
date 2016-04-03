@@ -59,6 +59,7 @@ always_comb
           else
             begin
               pdata_in_ready_o = task_ready_i[ INIT_ ];
+              //pdata_in_ready_o = 1'b1; // task_ready_i[ INIT_ ];
             end
         end
 

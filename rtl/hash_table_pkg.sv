@@ -95,8 +95,17 @@ package hash_table;
     // only for verification
     ht_chain_state_t            chain_state;
   } ht_result_t;
+  
+  function automatic string command2str( ref ht_command_t cmd );
+    string s;
+    
+    $sformat( s, "opcode = %s key = 0x%x value = 0x%x", 
+                  cmd.opcode, cmd.key, cmd.value );
 
-  function string pdata2str( input ht_pdata_t pdata );
+    return s;
+  endfunction
+
+  function automatic string pdata2str( ref ht_pdata_t pdata );
     string s;
 
     $sformat( s, "opcode = %s key = 0x%x value = 0x%x head_ptr = 0x%x head_ptr_val = 0x%x", 
@@ -105,7 +114,7 @@ package hash_table;
     return s;
   endfunction
 
-  function string ram_data2str( input ram_data_t data );
+  function automatic string ram_data2str( ref ram_data_t data );
     string s;
 
     $sformat( s, "key = 0x%x value = 0x%x next_ptr = 0x%x next_ptr_val = 0x%x",
@@ -114,7 +123,7 @@ package hash_table;
     return s;
   endfunction
 
-  function string result2str( input ht_result_t result );
+  function automatic string result2str( ref ht_result_t result );
     string s;
 
     case( result.cmd.opcode )

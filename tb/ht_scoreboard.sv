@@ -65,7 +65,7 @@ class ht_scoreboard;
       end
   endtask
   
-  function void calc_stat( input ht_command_t c, ht_result_t r );
+  function void calc_stat( ref ht_command_t c, ref ht_result_t r );
 
     stat_in_opcode  [ c.opcode     ] += 1;
     stat_out_opcode [ r.cmd.opcode ] += 1;
@@ -113,13 +113,17 @@ class ht_scoreboard;
     return rez;
   endfunction 
 
-  function void check( input ht_command_t c, ht_result_t r );
+  function void check( ref ht_command_t c, ref ht_result_t r );
     ht_result_t ref_res;
+    ht_command_t r_cmd;
+    r_cmd = r.cmd;
     
-    if( r.cmd != c )
+    if( c != r_cmd )
       begin
         `INC_ERR_STATS( COMMAND_LOST_REORDER ) 
         $error("DUT command in result don't match (maybe lost some command or reordering...?)");
+        $display("to   dut cmd: %s", command2str( c     ) );
+        $display("from dut cmd: %s", command2str( r_cmd ) );
         return;
       end
 

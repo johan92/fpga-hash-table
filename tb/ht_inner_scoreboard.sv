@@ -12,6 +12,7 @@ class ht_inner_scoreboard;
   virtual head_table_if        _head_t_if;
   virtual data_table_if        _data_t_if;
   virtual empty_ptr_storage_if _eps_if;
+  virtual init_table_if        _init_t_if;
 
   localparam BUCKETS_CNT      = 2**BUCKET_WIDTH;
   localparam HEAD_TABLE_WORDS = 2**BUCKET_WIDTH;
@@ -69,12 +70,14 @@ class ht_inner_scoreboard;
 
   function new( input virtual head_table_if         _head_table_if,
                       virtual data_table_if         _data_table_if,
-                      virtual empty_ptr_storage_if  _eps_if
+                      virtual empty_ptr_storage_if  _eps_if,
+                      virtual init_table_if         _init_table_if
               ); 
 
     this._head_t_if = _head_table_if;
     this._data_t_if = _data_table_if;
     this._eps_if    = _eps_if;
+    this._init_t_if = _init_table_if;
 
   endfunction
   
@@ -134,27 +137,32 @@ class ht_inner_scoreboard;
       begin
 
         @( _data_t_if.cb )
-
-        if( _data_t_if.cb.wr_en )
+        
+        // when initing table it could be wrong value in tables, so 
+        // don't check it...
+        if( _init_t_if.cb.in_init == 1'b0 )
           begin
-            `INC_STATS( DATA_TABLE_WR )
-
-            data_table[ _data_t_if.cb.wr_addr ] = _data_t_if.cb.wr_data;
-
-            do_tables_check( );
-          end
-
-        if( _data_t_if.cb.rd_en )
-          begin
-            `INC_STATS( DATA_TABLE_RD )
-            
-            // checking that we don't read from addreses that we think is empty 
-            if( empty_ptr_mask[ _data_t_if.cb.rd_addr ] == 1'b1 )
+            if( _data_t_if.cb.wr_en )
               begin
-                `INC_ERR_STATS( DATA_TABLE_RD_FROM_EMPTY )
-                $error( "ERROR: reading from empty addr = 0x%x", _data_t_if.cb.rd_addr );
+                `INC_STATS( DATA_TABLE_WR )
+
+                data_table[ _data_t_if.cb.wr_addr ] = _data_t_if.cb.wr_data;
+
+                do_tables_check( );
               end
 
+            if( _data_t_if.cb.rd_en )
+              begin
+                `INC_STATS( DATA_TABLE_RD )
+                
+                // checking that we don't read from addreses that we think is empty 
+                if( empty_ptr_mask[ _data_t_if.cb.rd_addr ] == 1'b1 )
+                  begin
+                    `INC_ERR_STATS( DATA_TABLE_RD_FROM_EMPTY )
+                    $error( "ERROR: reading from empty addr = 0x%x", _data_t_if.cb.rd_addr );
+                  end
+
+              end
           end
 
       end
@@ -265,7 +273,7 @@ class ht_inner_scoreboard;
       begin
         `INC_ERR_STATS( KEY_BUCKET_MISMATCH )
 
-        $error("ERROR: addr = 0x%x key=0x%x don't match bucket_num = 0x%x", 
+        $error("ERROR: addr = 0x%x key = 0x%x don't match bucket_num = 0x%x", 
                         _addr, data_table[_addr].key, _bucket_num );
 
         rez = -1;

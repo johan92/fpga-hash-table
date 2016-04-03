@@ -27,7 +27,8 @@ class ht_environment;
 
                              virtual head_table_if        _head_table_if,
                              virtual data_table_if        _data_table_if,
-                             virtual empty_ptr_storage_if _eps_if 
+                             virtual empty_ptr_storage_if _eps_if,
+                             virtual init_table_if        _init_table_if
                            );
     drv2scb = new( );
     mon2scb = new( );
@@ -36,7 +37,7 @@ class ht_environment;
     mon = new( mon2scb,         _res_if );
     scb = new( drv2scb, mon2scb         );
 
-    scb_inner = new( _head_table_if, _data_table_if, _eps_if );
+    scb_inner = new( _head_table_if, _data_table_if, _eps_if, _init_table_if );
   endfunction 
   
   task run( );

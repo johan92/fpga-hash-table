@@ -59,16 +59,11 @@ always_ff @( posedge clk_i or posedge rst_i )
     else
       prev_pdata_en <= 1'b0;
 
-// FIXME: prev_pdata.cmd.opcode == OP_INIT is wrong here,
-//        need backpreasure in another place
-assign need_backpressure = ( prev_pdata.cmd.opcode == OP_INIT ) ||
-                           (
-                             ( prev_pdata.bucket == pdata_in_i.bucket ) &&
-                             ( 
-                               ( prev_pdata.cmd.opcode == OP_INSERT ) ||
-                               ( prev_pdata.cmd.opcode == OP_DELETE )
-                             ) 
-                           );
+assign need_backpressure = ( prev_pdata.bucket == pdata_in_i.bucket ) &&
+                           ( 
+                             ( prev_pdata.cmd.opcode == OP_INSERT ) ||
+                             ( prev_pdata.cmd.opcode == OP_DELETE )
+                           ); 
 always_comb
   begin
     bp_pdata_in_valid = pdata_in_valid_i;

@@ -44,7 +44,8 @@ logic                task_valid       [DIR_CNT-1:0];
 logic                task_ready       [DIR_CNT-1:0];
 logic                task_processing  [DIR_CNT-1:0];
 
-logic                search_task_in_proccess;
+logic                init_task_in_process;
+logic                search_task_in_process;
 
 empty_ptr_storage_if eps_if(
   .clk( clk_i )
@@ -76,6 +77,8 @@ data_table_init init_eng(
   .task_valid_i                           ( task_valid [INIT_]       ),
   .task_ready_o                           ( task_ready [INIT_]       ),
   
+  .task_in_process_o                      ( init_task_in_process     ),
+
   .data_table_if                          ( data_table_if[INIT_]     ),
     
   .head_table_if                          ( head_table_eng_if[INIT_] ),
@@ -101,7 +104,7 @@ data_table_search_wrapper #(
   .task_valid_i                           ( task_valid       [SEARCH_] ),
   .task_ready_o                           ( task_ready       [SEARCH_] ),
 
-  .task_in_proccess_o                     ( search_task_in_proccess    ),
+  .task_in_process_o                      ( search_task_in_process     ),
   
   .data_table_if                          ( data_table_if[SEARCH_]     ),
 
@@ -154,8 +157,8 @@ data_table_delete #(
   .ht_res_if                              ( ht_eng_res[DELETE_]             )
 );
 
-assign task_processing[ INIT_   ] = !task_ready[ INIT_   ];
-assign task_processing[ SEARCH_ ] = search_task_in_proccess;
+assign task_processing[ INIT_   ] = init_task_in_process;
+assign task_processing[ SEARCH_ ] = search_task_in_process;
 assign task_processing[ INSERT_ ] = !task_ready[ INSERT_ ];
 assign task_processing[ DELETE_ ] = !task_ready[ DELETE_ ];
 
